@@ -3,9 +3,14 @@ name = "aptos_fighters"
 version = "1.0.0"
 authors = []
 
+
 [addresses]
+pyth = "_"
+aptos_fighters_address = "_"
 
 [dev-addresses]
+pyth = "0x123" 
+aptos_fighters_address = "0x456"
 
 [dependencies.AptosFramework]
 git = "https://github.com/aptos-labs/aptos-framework.git"
