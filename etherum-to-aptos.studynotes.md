@@ -1,5 +1,24 @@
+# Ethereum vs. Aptos
 
-# Ethereum vs. Aptos 
+## High Level Overview
+
+| Feature | Ethereum | Aptos |
+|---------|----------|-------|
+| **Smart Contracts** | Solidity, EVM | Move, MoveVM |
+| **Benefits** | Mature, wide adoption | Scalability, low latency, predictable fees |
+| **Transaction Fees** | Variable, can be high | Lower and more predictable |
+| **Account Addresses** | 160-bit | 256-bit |
+| **Account Structure** | Balance in a single field, uses nonce | Modules and resources, uses sequence number |
+| **Data Storage** | Patricia Merkle Trees | Global storage with resources and modules |
+| **Storage Mindset** | Contract-based storage | Account centric mindset for code and data |
+| **Example Code** | ERC-20 | Fungible Asset |
+| **Caller ID** | `msg.sender` | `&signer` reference |
+| **Upgradeability** | Proxy patterns | Direct module upgrades |
+| **Safety & Security** | Vulnerable to attacks like reentrancy | Mitigates common vulnerabilities |
+| **Dispatch Type** | Dynamic dispatch | Static dispatch |
+| **FT Standard** | ERC-20 | Coin (legacy) and Fungible Asset |
+| **NFT Standards** | ERC-721, ERC-1155 | Digital Asset |
+| **Blockchain Interaction** | Ethers.js library | Aptos Typescript SDK |
 
 ## Account Models
 
@@ -10,7 +29,7 @@
 | **Code Storage** | Contract accounts store code; EOAs do not | Any account can store code in the form of "modules" |
 | **Data Storage** | State stored in a key-value store | Data stored as typed "resources" under accounts |
 | **Balance** | Direct field in account state | Stored as resources for each asset type |
-| **Transaction Counter** | Nonce (tracks transactions paid for) | Sequence number (tracks transactions sent) |
+| **Transaction Counter** | Nonce  | Sequence number  |
 | **Authentication** | EOAs: controlled by private keys<br>Contracts: controlled by code | Traditionally controlled by private keys<br>Account Abstraction: can use custom authentication logic |
 | **Account Abstraction** | Separate proposal (EIP-4337) | Native feature in Aptos |
 
@@ -38,12 +57,6 @@
   - Larger storage requirements
   - More difficult for humans to handle without truncation
   - Potentially higher computational overhead
-| **Code Storage** | Contract accounts store code; EOAs do not | Any account can store code in the form of "modules" |
-| **Data Storage** | State stored in a key-value store | Data stored as typed "resources" under accounts |
-| **Balance** | Direct field in account state | Stored as resources for each asset type |
-| **Transaction Counter** | Nonce (tracks transactions paid for) | Sequence number (tracks transactions sent) |
-| **Authentication** | EOAs: controlled by private keys<br>Contracts: controlled by code | Traditionally controlled by private keys<br>Account Abstraction: can use custom authentication logic |
-| **Account Abstraction** | Separate proposal (EIP-4337) | Native feature in Aptos |
 
 ## Account Abstraction Comparison
 
@@ -54,12 +67,20 @@ Account abstraction allows for customized transaction validation beyond simple c
 |---------|---------------------|---------------------------|
 | **Implementation** | Add-on solution through a separate protocol | Native feature built into the core protocol |
 | **Authentication** | Smart contract validates transactions | Move modules define custom authentication logic |
-| **User Experience** | Requires special infrastructure (bundlers) | Seamless experience with standard transactions |
+| **User Experience** | Requires special infrastructure (bundlers, alt-mempool) | Seamless experience with standard transactions |
 | **Simplicity** | Complex stack with multiple components | Direct implementation in the VM |
 | **Gas Payment** | Can pay fees with any token | Similar flexibility in fee payment |
 | **Recovery Options** | Programmable recovery logic | Fully customizable recovery mechanisms |
 | **Account Creation** | Requires on-chain transaction | Supports both on-chain and deterministic derivation |
 
+## Comparing Token Standards in Detail
+
+| | Solidity | Move (Aptos) |
+|---|---------|--------------|
+| **Token Structure** | Each token is its own contract. | Every token is a typed `Coin` or `FungibleAsset` using a single, reusable contract. |
+| **Token Standard** | Must conform to standards like ERC20; implementations can vary. | Uniform interface and implementation for all tokens. |
+| **Balance Storage** | Balances stored in contract using a mapping structure. | **Resource-Oriented Balance**: Balances stored as a resource in the user's account. Resources cannot be arbitrarily created, ensuring integrity of token value. |
+| **Transfer Mechanism** | Tokens can be transferred without receiver's explicit permission. | Except for specific cases (like AptosCoin), Tokens generally require receiver's `signer` authority for transfer. |
 
 ## Data Storage Models Comparison
 
@@ -85,7 +106,6 @@ struct GlobalStorage {
   1. **Resources storage**: Maps `(address, ResourceType)` pairs to resource values
   2. **Modules storage**: Maps `(address, ModuleName)` pairs to module bytecode
 - Each account's data forms a tree that branches into specific modules and resources
-
 
 ## Contract-Level Storage in Ethereum
 
@@ -164,7 +184,6 @@ module 0x1::my_module {
 - Type system enforces data ownership rules
 - Global storage operations (move_to, move_from, borrow_global) for accessing data
 
-
 ## Key Differences Between Storage Models
 
 ### Ethereum (Contract-Level)
@@ -224,5 +243,52 @@ Global Storage
 └── ...
 ```
 
+## Comparing EVM and Move VM in Detail
 
+### EVM (Ethereum Virtual Machine)
+
+* Known for its flexibility and dynamic dispatch, which allows a wide range of smart contract behaviors
+* This flexibility can lead to complexities in parallel execution and network operations
+
+### Move VM (Move Virtual Machine)
+
+* Focuses on safety and efficiency with a more integrated approach between the VM and the programming language
+* Its data storage model allows for better parallelization, and its static dispatch method enhances security and predictability
+
+| | EVM (Ethereum Virtual Machine) | Move VM (Move Virtual Machine) |
+|---|------------------------------|----------------------------|
+| **Data Storage** | Data is stored in the smart contract's storage space. | Data is stored across smart contracts, user accounts, and objects. |
+| **Parallelization** | Parallel execution is limited due to shared storage space. | More parallel execution enabled due to flexible split storage design. |
+| **VM and Language Integration** | Separate layers for EVM and smart contract languages (e.g., Solidity). | Seamless integration between VM layer and Move language, with native functions written in Rust executable in Move. |
+| **Critical Network Operations** | Implementation of network operations can be complex and less direct. | Critical operations like validator set management natively implemented in Move, allowing for direct execution. |
+| **Function Calling** | Dynamic dispatch allows for arbitrary smart contract calls. | Static dispatch aligns with a focus on security and predictable behavior. |
+| **Type Safety** | Contract types provide a level of type safety. | Module structs and generics in Move offer robust type safety. |
+| **Transaction Safety** | Uses nonces for transaction ordering and safety. | Uses sequence numbers for transaction ordering and safety. |
+| **Authenticated Storage** | Yes, with smart contract storage. | Yes, leveraging Move's resource model. |
+| **Object Accessibility** | Objects are not globally accessible; bound to smart contract scope. | Guaranteed global accessibility of objects. |
+
+## Multisig Implementation Comparison
+
+| Feature | Ethereum | Aptos |
+|---------|----------|-------|
+| **Implementation Level** | Smart contract-based | Protocol-level native implementation |
+| **Deployment** | Requires deploying a dedicated multisig wallet contract | Built into the account system, no additional contracts needed |
+| **Gas Costs** | Higher due to contract execution | Lower as it's native to the protocol |
+| **Flexibility** | Highly customizable through contract logic | Configurable K-of-N signature scheme with standard functions |
+| **Security** | Security depends on contract implementation | Security guaranteed by the protocol |
+| **Transaction Flow** | 1. Submit transaction to multisig contract<br>2. Collect approvals from signers<br>3. Execute when threshold met | 1. Create transaction with multisig address as sender<br>2. Collect K signatures from authorized signers<br>3. Combine signatures into multisig authenticator<br>4. Submit signed transaction |
+| **Integration Complexity** | Requires understanding contract-specific APIs | Uses standard transaction patterns |
+
+## Randomness Implementation Comparison
+
+| Feature | Ethereum | Aptos |
+|---------|----------|-------|
+| **Implementation** | External oracles (Chainlink VRF) or unsafe block values | Native randomness API with security features |
+| **Security** | Vulnerable to miner manipulation when using block values | Built-in security against test-and-abort attacks |
+| **Usage Pattern** | Request-response pattern with callbacks for oracles | Direct API calls with function annotations |
+| **Gas Costs** | High for oracle-based solutions | Lower as it's native to the protocol |
+| **Randomness Quality** | Varies based on implementation | Cryptographically secure |
+| **Developer Experience** | Complex integration with external services | Simple annotations and API calls |
+| **Example Usage** | ```solidity<br>// Using Chainlink VRF<br>function getRandomNumber() public returns (bytes32 requestId) {<br>  return requestRandomness(keyHash, fee);<br>}<br>function fulfillRandomness(bytes32 requestId, uint256 randomness) internal override {<br>  // Use randomness<br>}``` | ```move<br>#[randomness]<br>entry fun decide_winner() {<br>  let winner = aptos_framework::randomness::u64_range(0, n);<br>  // Use winner<br>}``` |
+| **Key Security Features** | Oracle-specific security guarantees | 1. Functions must be private entry functions<br>2. Compiler enforces security rules<br>3. Protection against undergasing attacks |
 
