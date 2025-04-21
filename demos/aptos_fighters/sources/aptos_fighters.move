@@ -214,27 +214,30 @@ For something like InsufficientBalance(uint256 required, uint256 available),
 /// init 
 // note: pyth works slightly different than chainlink , we just need to add the price id, pyth address is fixed
 // public entry fun init_contract(game_token: Object<Token>,price_id: vector<u8> ,game_rule :Object<GameRules>) {
-public entry fun init_contract(game_token: Object<Token>,price_id: vector<u8> ,game_staking_amount:u64,
-         game_duration:u64,
-         game_start_time:u64,
-         reward_amount:u64,
-         assets: vector<address>,
-         asset_amounts : vector<u64>) {
-    // move_to(owner, Billboard { messages: vector[], oldest_index: 0 })
-    // check input data 
-    // in Move :  When you have an Object<T> type, you need to borrow the inner value to access its fields.
-
+public entry fun init_contract(
+    game_token_add: address,
+    price_id: vector<u8>,
+    game_staking_amount: u64,
+    game_duration: u64,
+    game_start_time: u64,
+    reward_amount: u64,
+    assets: vector<address>,
+    asset_amounts: vector<u64>
+) {
+    // Check input data
     assert!(game_duration > 0, error::invalid_argument(EINVALID_DURATION));
     assert!(game_staking_amount > 0, error::invalid_argument(EINVALID_AMOUNT));
     assert!(reward_amount > 0, error::invalid_argument(EINVALID_AMOUNT));
-    assert!(game_start_time  < timestamp::now_seconds(), error::invalid_argument(EINVALID_GAME_START_TIME));
+    assert!(game_start_time > timestamp::now_seconds(), error::invalid_argument(EINVALID_GAME_START_TIME));
+    
     let assets_length = vector::length(&assets);
     let amounts_length = vector::length(&asset_amounts);
-
-    assert!(assets_length != amounts_length , error::invalid_argument(EINVALID_ARRAY_LENGTH));
-    // let token_address = object::object_address(&game_token);
-
-    // assert!(object::exists_at(token_address), error::unavailable(EINVALID_ADDRESS));
+    
+    // Changed != to == (you want them to be equal, not unequal)
+    assert!(assets_length == amounts_length, error::invalid_argument(EINVALID_ARRAY_LENGTH));
+    
+    // I wanted to use  object::exists_at instead or exists<Token> but it's not working , let's use this generic way for now
+    assert!(object::is_object(game_token_add), error::not_found(EINVALID_ADDRESS));
 
 
 }
