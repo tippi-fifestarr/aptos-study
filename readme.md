@@ -24,20 +24,16 @@ The repository contains detailed study notes on various aspects of Aptos and Mov
 The [`/demos`](./demos) directory contains practical projects to apply what you've learned:
 
 ### Featured Projects
-- [**Aptos Fighters VS Ethereum Fighters**](./demos/AptosFighters) - ETHGlobal Taipei winner, a trading game where players compete by buying/selling assets with encrypted balances, implementing the Ethereum version's core game mechanics in Move
+- [**Aptos Fighters VS Ethereum Fighters**](./demos/aptos_fighters) - ETHGlobal Taipei winner, a trading game where players compete by buying/selling assets with encrypted balances, implementing the Ethereum version's core game mechanics in Move
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Install the [Aptos CLI](https://aptos.dev/tools/aptos-cli/)
+- Install the [Aptos CLI](https://aptos.dev/en/build/cli)
 - Set up a local development environment
 
 ### Setup Instructions
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/yourusername/aptos-study-notes.git
-   cd aptos-study-notes
-   ```
+1. Clone the repository
 
 2. Navigate to a demo project:
    ```bash
@@ -82,8 +78,8 @@ For those new to Aptos and Move, I recommend following this learning order:
 
 ## 🔗 Additional Resources
 
-- [Official Aptos Documentation](https://aptos.dev/docs/)
-- [Move Language Book](https://move-language.github.io/move/)
+- [Official Aptos Documentation](https://aptos.dev/)
+- [The Move Book](https://aptos.dev/en/build/smart-contracts/book)
 - [Aptos Framework Reference](https://github.com/aptos-labs/aptos-core/tree/main/aptos-move/framework)
 - [Aptos Developer Discord](https://discord.gg/aptoslabs)
 
