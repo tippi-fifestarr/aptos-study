@@ -3,18 +3,21 @@ name = "aptos_fighters"
 version = "1.0.0"
 authors = []
 
-
 [addresses]
 pyth = "_"
 aptos_fighters_address = "_"
+deployer = "_"
+wormhole = "_"
 
 [dev-addresses]
-pyth = "0x123" 
 aptos_fighters_address = "0x456"
+pyth = "0x7e783b349d3e89cf5931af376ebeadbfab855b3fa239b7ada8f5a92fbea6b387"
+deployer = "0xb31e712b26fd295357355f6845e77c888298636609e93bc9b05f0f604049f434"
+wormhole = "0x5bc11445584a763c1fa7ed39081f1b920954da14e04b32440cba863d03e19625"
 
-[dependencies.AptosFramework]
-git = "https://github.com/aptos-labs/aptos-framework.git"
-rev = "mainnet"
-subdir = "aptos-framework"
+[dependencies]
+Pyth = { git = "https://github.com/pyth-network/pyth-crosschain.git", subdir = "target_chains/aptos/contracts", rev = "main" }
+AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-framework", rev = "6f83bc6d02207298b2dee91133d75538789bf582" }
+
 
 [dev-dependencies]
