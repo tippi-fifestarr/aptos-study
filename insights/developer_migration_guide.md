@@ -2,6 +2,48 @@
 
 This guide captures key insights from Eman's study notes about the transition from other blockchain ecosystems to Aptos.
 
+## Effective Learning Approach
+
+Based on Eman's follow-up interview, we've identified an effective learning process for experienced blockchain developers:
+
+### 1. Theory-First, Implementation-Second Approach
+
+**Quote from Eman**:
+> "I'm kind of person who love to understand the theory, the theoretical part. So whenever I'm stuck, I know exactly what I'm doing. I cannot like kind of having a black box."
+
+This approach involves:
+- First understanding Move's core concepts and type system
+- Learning about Aptos's account-centric model
+- Understanding resource abilities and storage operations
+- Then implementing practical examples
+
+### 2. Contract Migration as a Learning Tool
+
+**Learning Pattern**:
+Eman found it effective to:
+1. Take an existing Solidity contract she was familiar with
+2. Identify the core components (state variables, events, functions)
+3. Systematically translate each component to Move
+4. Use AI assistance when encountering errors, but verify solutions
+
+**Example Migration Workflow**:
+```
+1. Identify contract state variables → Map to Move resources
+2. Convert events → Create Move event structs
+3. Map constructor → Create init_module function
+4. Convert functions → Create entry and public functions
+5. Test and debug incrementally
+```
+
+### 3. Debugging with AI Assistance
+
+When encountering errors:
+1. First try to understand the root cause based on theoretical knowledge
+2. If stuck, copy the error and code to an AI assistant
+3. Evaluate the suggested solution against your understanding
+4. Apply the fix and verify it works
+5. Learn from the pattern for future reference
+
 ## For EVM (Ethereum) Developers
 
 ### Mental Model Shifts
@@ -138,6 +180,43 @@ public fun get_data(addr: address): u64 acquires MyResource {
 }
 ```
 
+## Common Development Challenges
+
+Based on Eman's feedback, be aware of these common challenges when developing on Aptos:
+
+### 1. CLI Ambiguities
+
+**Issue**: CLI output can be ambiguous with empty result arrays:
+```
+BUILDING aptos_fighters { "Result": [] }
+```
+
+This doesn't clearly indicate success or failure.
+
+**Workaround**: Check for error messages, and verify file structure manually when in doubt.
+
+### 2. Dependency Management
+
+**Issue**: Dependency conflicts between packages and Aptos Framework versions:
+```
+"Error": "Move compilation failed: Unable to resolve packages for package 'aptos_fighters':
+While resolving dependency 'Pyth' in package 'aptos_fighters':
+Unable to resolve package dependency 'Pyth':
+While resolving dependency 'AptosFramework' in package 'Pyth':
+Failed to fetch to latest Git state for package 'AptosFramework'
+```
+
+**Workaround**: 
+- Use the exact commit hash from dependency projects
+- Consider removing duplicate framework imports
+- When integrating Pyth Oracle, use their specified Aptos Framework version
+
+### 3. Testing Behavior
+
+**Issue**: Tests may appear to pass despite syntax errors.
+
+**Workaround**: Verify compilation success separately from test outcomes.
+
 ## Tips For All Developers
 
 1. **Understand Resources**: The most important concept in Move is resources with abilities (key, store, drop, copy)
@@ -153,3 +232,5 @@ public fun get_data(addr: address): u64 acquires MyResource {
 6. **Adapt to Different Error Handling**: Move uses error codes instead of strings for more efficient error handling
 
 7. **Learn Storage Operations**: Understand the five key storage operations: `move_to`, `move_from`, `borrow_global`, `borrow_global_mut`, and `exists`
+
+8. **Start with Migration**: If you're experienced with other chains, start by migrating a familiar contract to learn Move patterns
