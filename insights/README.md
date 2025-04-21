@@ -15,7 +15,8 @@ A summary of Aptos's most distinctive technical capabilities that make it appeal
 A detailed comparison to help developers from other ecosystems (particularly EVM and Solana) transition to Aptos, including:
 - Mental model shifts for each ecosystem
 - Code pattern translations with side-by-side comparisons
-- Tips for all developers moving to the Aptos ecosystem
+- Learning approach based on migrating familiar contracts
+- Common development challenges and workarounds
 
 ### 3. [Hackathon Project Ideas](./hackathon_project_ideas.md)
 Structured project ideas leveraging Aptos's unique capabilities, organized by hackathon theme:
@@ -36,7 +37,23 @@ Suggestions for improving the user experience and documentation:
 - User interface enhancements based on direct feedback
 - Documentation structure improvements
 - Learning experience recommendations
+- CLI and development environment improvements
 - Content-specific suggestions
+
+### 6. [Aligned Hackathon Themes](./aligned_hackathon_themes.md)
+A mapping of our insights to the official Aptos Hackathon Themes document:
+- Specific technical implementations for each theme using Aptos's unique features
+- Code snippets from Eman's notes relevant to each theme
+- Detailed implementation highlights for all ten official project ideas
+- Technical advantages of using Aptos for each project category
+
+### 7. [Changes Based on Follow-up Feedback](./changes.md)
+A summary of key changes needed based on Eman's follow-up conversation:
+- CLI and development environment issues
+- Learning process insights
+- Oracle integration clarifications
+- Dependency management challenges
+- Clean project command issues
 
 ## Key Cross-Cutting Themes
 
@@ -62,17 +79,37 @@ Throughout Eman's feedback and study notes, several important themes emerged:
 
    Interactive components significantly enhance the learning experience, especially under time pressure.
 
-5. **Feature Differentiation**
-   Eman was particularly interested in understanding what makes Aptos unique (like oracle support, randomness API, etc.) compared to other chains.
+5. **Theory-First, Implementation-Second Learning Style**
+   > "I'm kind of person who love to understand the theory, the theoretical part. So whenever I'm stuck, I know exactly what I'm doing."
+
+   Many experienced developers prefer to understand concepts thoroughly before implementation.
+
+6. **CLI and Development Environment Challenges**
+   > "The CLI template is horrible... it should be with at least the required files"
+
+   Ambiguous compilation results and template limitations create friction for developers.
+
+7. **Dependency Management Issues**
+   > "I had problem when I was trying to integrate Pyth Oracle things because they are using specific commit and I was trying to get the latest Aptos framework and there's a conflict there."
+
+   Version conflicts between packages cause significant time loss during hackathons.
 
 ## Implementation Priorities
 
 Based on the comprehensive insights, here are the recommended implementation priorities:
 
 1. **Enhance the Decision Tree** with interactive elements and Aptos-specific feature highlights
+
 2. **Create Ecosystem-Specific Migration Guides** for EVM and Solana developers
-3. **Develop Concrete Project Templates** for each hackathon theme
+
+3. **Develop Concrete Project Templates** for each hackathon theme, ensuring they include all required files
+
 4. **Improve Resource Discoverability** with visual highlighting and better organization
+
 5. **Add More Working Code Examples** that can be easily copied and modified
+
+6. **Create CLI Troubleshooting Guide** to address ambiguous compilation results and dependency issues
+
+7. **Document Common Integration Challenges** especially for Oracle integrations and dependency management
 
 These insights provide a solid foundation for enhancing the Aptos Hackathon Quickstart to better serve participants and help them build innovative projects that leverage Aptos's unique capabilities.

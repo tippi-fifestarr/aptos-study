@@ -55,3 +55,60 @@ Based on Eman's study notes and the interview transcript, here are the distincti
 - Static dispatch for enhanced security and performance
 - Direct module upgrades without proxy patterns
 - More scalable and lower latency processing
+
+## Common Blockchain Features (Not Unique to Aptos)
+
+### 1. Oracle Integration
+
+**Clarification from Eman**:
+> "I meant like this is kind of like any blockchain project would rely or use this kind of services, so it's not making Aptos unique. It is like any hackathon project you will have this kind of integration."
+
+While Oracle integration itself is common across blockchains, Aptos's implementation differs:
+
+- **Implementation Differences**:
+  - **Ethereum/Chainlink**: Uses separate contract per asset pair
+  - **Aptos/Pyth**: Single address with price IDs for different assets
+- **Technical Detail**: Pyth on Aptos works through Wormhole bridge for data transmission
+- **Integration Example**:
+  ```move
+  module example::example {
+      use pyth::pyth;
+      use pyth::price::Price;
+      use pyth::price_identifier;
+     
+      public fun get_btc_usd_price(user: &signer, pyth_price_update: vector<vector<u8>>): Price {
+          // Update price feeds
+          let coins = coin::withdraw(user, pyth::get_update_fee(&pyth_price_update));
+          pyth::update_price_feeds(pyth_price_update, coins);
+     
+          // Get price from feed
+          let btc_price_identifier = x"e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43";
+          let btc_usd_price_id = price_identifier::from_byte_vec(btc_price_identifier);
+          pyth::get_price(btc_usd_price_id)
+      }
+  }
+  ```
+
+### 2. Developer Tooling
+
+Many blockchain platforms provide comprehensive developer tooling, though Aptos puts emphasis on:
+- Native CLI integration
+- Built-in testing framework
+- Local testnet deployment
+
+**Current Limitation**: 
+As noted by Eman, the CLI has some usability issues:
+> "The CLI template is horrible... it should be with at least the required files"
+
+These issues include ambiguous compilation results, minimal templates, and dependency management challenges.
+
+## Truly Differentiating Factors
+
+When evaluating Aptos for hackathon projects, focus on these genuinely unique aspects:
+1. Account-centric resource model
+2. Native protocol-level multisig
+3. Built-in randomness API
+4. Two-tier account abstraction approach
+5. Move's resource safety features
+
+These features provide the strongest technical advantages compared to other blockchain platforms and should be highlighted in hackathon projects.

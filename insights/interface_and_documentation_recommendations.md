@@ -114,6 +114,65 @@ Eman struggled to find the faucet and other resources despite them being availab
 - Create a "Getting Started Checklist" with all essential resources
 - Include a troubleshooting guide addressing common issues
 
+## CLI and Development Environment Recommendations
+
+### 1. CLI Feedback and Error Handling
+
+**New Feedback Issue**:
+Eman encountered ambiguous compilation results and misleading test output.
+
+**Direct Quote**:
+> "The CLI template is horrible... it should be with at least the required files"
+
+**Recommendations**:
+- Document common CLI error patterns and their meaning
+- Create visual indicators for compilation success/failure states
+- Add explanations for empty result arrays `{ "Result": [] }` 
+- Provide examples of successful vs. failed compilations
+- Include warnings about tests appearing to pass despite syntax errors
+- Create a troubleshooting guide specifically for CLI issues
+
+### 2. Template System Improvements
+
+**New Feedback Issue**:
+Current templates are minimal or empty, forcing developers to create boilerplate.
+
+**Recommendations**:
+- Create detailed starter templates for common project types
+- Include example contracts with comprehensive features
+- Provide migration templates that show Solidity→Move transformations
+- Add docstrings and comments explaining code structure
+- Create templates for different project categories (DeFi, NFT, etc.)
+
+### 3. Dependency Management Guide
+
+**New Feedback Issue**:
+Eman spent significant time debugging dependency conflicts, particularly with Pyth Oracle integration.
+
+**Direct Quote**:
+> "I had problem when I was trying to integrate Pyth Oracle things because they are using specific commit and I was trying to get the latest Aptos framework and there's a conflict there."
+
+**Recommendations**:
+- Create a dedicated guide for managing dependencies
+- Document known conflicts between popular packages
+- Provide specific version combinations known to work together
+- Include examples of correct Move.toml configurations
+- Add troubleshooting steps for common dependency errors
+- Create a registry of known-good dependency versions
+
+### 4. CLI Common Tasks Guide
+
+**New Feedback Issue**:
+Current `aptos move clean` command asks about deleting local package cache, which can affect other projects.
+
+**Recommendations**:
+- Create a "CLI Common Tasks" guide with best practices
+- Document the behavior of the clean command and its implications
+- Provide safe command variations for different scenarios
+- Include screenshots of expected command output
+- Create a cheat sheet of frequently used commands
+- Document environment-specific differences (Windows vs. Mac/Linux)
+
 ## Content-Specific Recommendations
 
 ### 1. Aptos-Specific Advantages
