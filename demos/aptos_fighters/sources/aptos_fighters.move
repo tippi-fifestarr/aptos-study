@@ -55,7 +55,7 @@ module aptos_fighters_address::aptos_fighters {
 
     GameRules public gameRules;
 */
-    struct GameRules has store, drop {
+    struct GameRules has store, drop,copy {
          game_staking_amount:u64,
          game_duration:u64,
          game_start_time:u64,
@@ -294,6 +294,84 @@ That's why you correctly noted you don't need `acquires Game` in your `init_cont
     
     move_to(deployer, game);
 }
+
+/**
+    function enrollPlayer() external {
+        // Check if game start time has passed
+        if (block.timestamp >= gameRules.gameStartTime) revert GameInProgress();
+
+        // Check player is not already enrolled
+        if (msg.sender == player1 || msg.sender == player2)
+            revert NotAuthorized();
+
+        // Check if game is full
+        if (player1 != address(0) && player2 != address(0)) revert GameIsFull();
+
+        // Stake the game token
+        gameToken.safeTransferFrom(
+            msg.sender,
+            address(this),
+            gameRules.gameStakingAmount
+        );
+
+        // Transfer required assets
+        uint256 assetCount = gameRules.assets.length;
+        for (uint256 i = 0; i < assetCount; ++i) {
+            IERC20 asset = IERC20(gameRules.assets[i]);
+            uint256 requiredAmount = gameRules.assetAmounts[i];
+
+            if (asset.balanceOf(msg.sender) < requiredAmount) {
+                revert InsufficientBalance(
+                    requiredAmount,
+                    asset.balanceOf(msg.sender)
+                );
+            }
+
+            asset.safeTransferFrom(msg.sender, address(this), requiredAmount);
+        }
+
+        // Register player
+        if (player1 == address(0)) {
+            player1 = msg.sender;
+        } else {
+            player2 = msg.sender;
+        }
+
+        // Initialize player balances
+        userAsset1Balance[msg.sender] = 100; // Give some initial balance for gameplay
+        userAsset2Balance[msg.sender] = 10000; // Give some initial balance for gameplay
+
+        emit PlayerEnrolled(msg.sender);
+
+        // If both players are enrolled, update game status
+        if (player1 != address(0) && player2 != address(0)) {
+            // Check if game should start immediately
+            if (block.timestamp >= gameRules.gameStartTime) {
+                emit GameStarted(block.timestamp, gameRules.gameDuration);
+            }
+        }
+    }
+*/
+
+/// view functions 
+
+
+ #[view]
+ public fun get_game_rules (deployer_address :address): GameRules acquires Game{
+    // we have to use copy treat, here's why 
+    /*
+     cannot return a reference derived from struct `aptos_fighters::Game` since it is not based on a parameter
+     struct `aptos_fighters::Game` previously borrowed here
+     AI explains : 
+    The error message shows an important Move safety rule: you can't return a reference to something that exists in global storage.
+This is a fundamental safety feature in Move. References returned from functions must be derived from the function's input parameters, not from global storage. This prevents dangling references and other memory safety issues.
+*/
+   
+    let game = borrow_global<Game>(deployer_address);
+    game.game_rules
+ }
+
+
 
     /// Helper function to check if Game exists at an address
     #[test_only]
