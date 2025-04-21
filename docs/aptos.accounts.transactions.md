@@ -7,10 +7,11 @@
 - Account must exist on-chain before any operations can be performed with it
 - Authentication uses key rotation capability
 - Every account has:
-  - Resources (including coin storage)
+  - Resources (including coin storage AND smart contracts called "modules")
   - Increasing sequence number to prevent replay attacks
   - Authentication key
   - Event handles
+- Smart Contracts live inside the Account that deployed it, and are referenced like `0x00000000000000000000000000000001::module_name::function_name`
 
 ### Account Creation
 ```python
@@ -143,7 +144,7 @@ const [balanceStr] = await aptos.view<[string]>({
 
 ## Multisig Accounts
 If you’re coming from Ethereum/Solidity, note that Aptos handles multisig accounts differently. Aptos implements multisig directly at the protocol level, allowing accounts to require multiple signatures without deploying additional smart contracts.
-![alt text](image.png)
+![alt text](../image.png)
 ### Multisig Concept
 - Protocol-level multisig (not smart contract-based)
 - Configurable K-of-N signature scheme
