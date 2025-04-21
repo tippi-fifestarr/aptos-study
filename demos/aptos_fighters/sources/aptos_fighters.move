@@ -74,11 +74,11 @@ module aptos_fighters_address::aptos_fighters {
     struct Game has key,store, drop {
         player1:address,
         player2:address,
-        oracle_expiration_threshold:u64, // how can we make it immutable?????
+        // oracle_expiration_threshold:u64, // how can we make it immutable????? in pyth i couldn't get much details or i can say i couldn't understand it but i'm 100% sure it's not like we used to with chainlink price feeds
         data_feed: vector<u8>,// TODO, get the object type
         player1_reward_claimed:bool,
         player2_reward_claimed:bool,
-        game_token:  Object<Token>,
+        game_token: address, // let's just use the address, make it simpler 
         user_asset1_balance: vector<AssetBalance>,
         user_asset2_balance: vector<AssetBalance>,
         game_rules: GameRules,
@@ -215,7 +215,8 @@ For something like InsufficientBalance(uint256 required, uint256 available),
 // note: pyth works slightly different than chainlink , we just need to add the price id, pyth address is fixed
 // public entry fun init_contract(game_token: Object<Token>,price_id: vector<u8> ,game_rule :Object<GameRules>) {
 public entry fun init_contract(
-    game_token_add: address,
+deployer: &signer, // we have to use it, although the contract should not be ownable but i can't use move_to without singer 
+    game_token_add: address, 
     price_id: vector<u8>,
     game_staking_amount: u64,
     game_duration: u64,
@@ -223,7 +224,7 @@ public entry fun init_contract(
     reward_amount: u64,
     assets: vector<address>,
     asset_amounts: vector<u64>
-) {
+) { // so acquire we use when we read storage ? need to validate 
     // Check input data
     assert!(game_duration > 0, error::invalid_argument(EINVALID_DURATION));
     assert!(game_staking_amount > 0, error::invalid_argument(EINVALID_AMOUNT));
@@ -239,7 +240,27 @@ public entry fun init_contract(
     // I wanted to use  object::exists_at instead or exists<Token> but it's not working , let's use this generic way for now
     assert!(object::is_object(game_token_add), error::not_found(EINVALID_ADDRESS));
 
-
+    let game_rules =GameRules{
+         game_staking_amount,
+         game_duration,
+         game_start_time,
+         reward_amount,
+         assets,
+         asset_amounts };
+         // setting default values for uninitialized items
+      let game = Game {
+            data_feed: price_id,
+            player1_reward_claimed: false,
+            player2_reward_claimed: false,
+            game_token:game_token_add,
+            game_rules: game_rules,
+            // Default values for missing fields
+            player1: @0x0,
+            player2: @0x0,
+            user_asset1_balance: vector::empty<AssetBalance>(),
+            user_asset2_balance: vector::empty<AssetBalance>()
+};
+move_to(deployer,game);
 }
 
 
