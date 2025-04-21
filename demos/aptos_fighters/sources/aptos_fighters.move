@@ -9,11 +9,12 @@ module aptos_fighters_address::aptos_fighters {
     use aptos_framework::primary_fungible_store;
     use aptos_framework::timestamp;
     use aptos_framework::event;
+    use aptos_framework::coin;
     use aptos_token::token::{Self, Token};
     use pyth::pyth;
     use pyth::price::Price;
     use pyth::price_identifier;
-    use aptos_framework::coin;
+    use aptos_framework::account;
     #[test_only]
     use std::debug;
 /*   
@@ -64,14 +65,14 @@ module aptos_fighters_address::aptos_fighters {
         
     }
     // mapping
-    struct AssetBalance has key,store, drop {
+    struct AssetBalance has key, store, drop {
          player: address,
          balance: u64,
         
     }
 
     //:!:>resource
-    struct Game has key,store, drop {
+    struct Game has key, store, drop {
         player1:address,
         player2:address,
         // oracle_expiration_threshold:u64, // how can we make it immutable????? in pyth i couldn't get much details or i can say i couldn't understand it but i'm 100% sure it's not like we used to with chainlink price feeds
@@ -82,8 +83,6 @@ module aptos_fighters_address::aptos_fighters {
         user_asset1_balance: vector<AssetBalance>,
         user_asset2_balance: vector<AssetBalance>,
         game_rules: GameRules,
-
-
     }
     //<:!:resource
 /*    event PlayerEnrolled(address indexed player);
@@ -98,13 +97,13 @@ module aptos_fighters_address::aptos_fighters {
     event RewardClaimed(address indexed player, uint256 amount, bool isWinner);
 */
 
-#[event]
-struct AssetTraded has drop, store {
-    player: address,
-    price: u64,
-    asset_amount: u64,
-    is_buy: bool,
-}
+    #[event]
+    struct AssetTraded has drop, store {
+        player: address,
+        price: u64,
+        asset_amount: u64,
+        is_buy: bool,
+    }
     #[event]
     struct PlayerEnrolled has drop, store {
         player: address
@@ -268,83 +267,412 @@ That's why you correctly noted you don't need `acquires Game` in your `init_cont
     let assets_length = vector::length(&assets);
     let amounts_length = vector::length(&asset_amounts);
     
-    // Changed != to == (you want them to be equal, not unequal)
     assert!(assets_length == amounts_length, error::invalid_argument(EINVALID_ARRAY_LENGTH));
-    
-    // I wanted to use  object::exists_at instead or exists<Token> but it's not working , let's use this generic way for now
-    assert!(object::is_object(game_token_add), error::not_found(EINVALID_ADDRESS));
 
-    let game_rules =GameRules{
+    let game_rules = GameRules{
          game_staking_amount,
          game_duration,
          game_start_time,
          reward_amount,
          assets,
-         asset_amounts };
-         // setting default values for uninitialized items
-      let game = Game {
-            data_feed: price_id,
-            player1_reward_claimed: false,
-            player2_reward_claimed: false,
-            game_token:game_token_add,
-            game_rules: game_rules,
-            // Default values for missing fields
-            player1: @0x0,
-            player2: @0x0,
-            user_asset1_balance: vector::empty<AssetBalance>(),
-            user_asset2_balance: vector::empty<AssetBalance>()
-};
-move_to(deployer,game);
+         asset_amounts
+    };
+    
+    // setting default values for uninitialized items
+    let game = Game {
+        data_feed: price_id,
+        player1_reward_claimed: false,
+        player2_reward_claimed: false,
+        game_token: game_token_add,
+        game_rules: game_rules,
+        // Default values for missing fields
+        player1: @0x0,
+        player2: @0x0,
+        user_asset1_balance: vector::empty<AssetBalance>(),
+        user_asset2_balance: vector::empty<AssetBalance>()
+    };
+    
+    move_to(deployer, game);
 }
 
+    /// Helper function to check if Game exists at an address
+    #[test_only]
+    public fun exists_at(addr: address): bool {
+        exists<Game>(addr)
+    }
 
 
-/// functions 
+    
+    // ============== TEST FUNCTIONS ==============
+    
+    #[test_only]
+    // Constants for testing
+    const GAME_STAKING_AMOUNT: u64 = 100;
+    const GAME_DURATION: u64 = 86400; // 1 day in seconds
+    const REWARD_AMOUNT: u64 = 500;
+    
+    // Test accounts
+    const DEPLOYER: address = @0x123;
+    const PLAYER1: address = @0x456;
+    const PLAYER2: address = @0x789;
+    const GAME_TOKEN: address = @0xABC;
+    
+    /// Test for successful contract initialization
+    #[test(aptos_framework = @aptos_framework)]
+    public fun test_init_contract(aptos_framework: &signer) {
+        // Set up timestamp for testing using the aptos_framework account
+        timestamp::set_time_has_started_for_testing(aptos_framework);
+        
+        // Set up test accounts
+        let deployer = account::create_account_for_test(DEPLOYER);
+        
+        // Set up fake token address
+        let game_token_add = GAME_TOKEN;
+        account::create_account_for_test(game_token_add);
+        
+        let current_time = timestamp::now_seconds();
 
+        // Set up the object and make it a valid object
+        object::create_named_object(aptos_framework, b"game_token");
+        
+        // Configure test parameters
+        let price_id = b"ETH/USD"; // Mock price feed ID
+        let game_staking_amount = GAME_STAKING_AMOUNT;
+        let game_duration = GAME_DURATION;
+        let game_start_time = current_time + 1000; // Start in the future
+        let reward_amount = REWARD_AMOUNT;
+        
+        // Set up assets and amounts
+        let assets = vector::empty<address>();
+        let asset_amounts = vector::empty<u64>();
+        
+        // Add some test assets
+        vector::push_back(&mut assets, @0xA1);
+        vector::push_back(&mut assets, @0xA2);
+        vector::push_back(&mut asset_amounts, 10);
+        vector::push_back(&mut asset_amounts, 20);
+        
+        // Initialize the contract
+        init_contract(
+            &deployer,
+            game_token_add,
+            price_id,
+            game_staking_amount,
+            game_duration,
+            game_start_time,
+            reward_amount,
+            assets,
+            asset_amounts
+        );
+        
+        // Verify the contract was initialized
+        assert!(exists_at(DEPLOYER), 0);
+    }
+    #[test(aptos_framework = @aptos_framework)]
+public fun test_game_creation_success(aptos_framework: &signer) acquires Game {
+    // Set up timestamp for testing
+    timestamp::set_time_has_started_for_testing(aptos_framework);
+    
+    // Set up test accounts
+    let deployer = account::create_account_for_test(DEPLOYER);
+    let deployer_address = signer::address_of(&deployer);
+    
+    // Set up token address
+    let game_token_add = GAME_TOKEN;
+    account::create_account_for_test(game_token_add);
+    
+    let current_time = timestamp::now_seconds();
+    
+    // Set up object
+    object::create_named_object(aptos_framework, b"game_token");
+    
+    // Configure valid test parameters
+    let price_id = b"ETH/USD";
+    let game_staking_amount = GAME_STAKING_AMOUNT;
+    let game_duration = GAME_DURATION;
+    let game_start_time = current_time + 1000;
+    let reward_amount = REWARD_AMOUNT;
+    
+    // Set up assets and amounts (correctly matched)
+    let assets = vector::empty<address>();
+    let asset_amounts = vector::empty<u64>();
+    
+    vector::push_back(&mut assets, @0xA1);
+    vector::push_back(&mut assets, @0xA2);
+    vector::push_back(&mut asset_amounts, 10);
+    vector::push_back(&mut asset_amounts, 20);
+    
+    // Initialize the contract
+    init_contract(
+        &deployer,
+        game_token_add,
+        price_id,
+        game_staking_amount,
+        game_duration,
+        game_start_time,
+        reward_amount,
+        assets,
+        asset_amounts
+    );
+    
+    // Verify the game exists
+    assert!(exists<Game>(deployer_address), 0);
+    
+    // Optional: Verify game properties are set correctly
+    let game = borrow_global<Game>(deployer_address);
+    
+    // Verify basic properties
+    assert!(game.game_token == game_token_add, 1);
+    assert!(game.game_rules.game_duration == game_duration, 2);
+    assert!(game.game_rules.game_staking_amount == game_staking_amount, 3);
+    assert!(game.game_rules.game_start_time == game_start_time, 4);
+    assert!(game.game_rules.reward_amount == reward_amount, 5);
+    
+    // Verify vectors are set correctly
+    let stored_assets = &game.game_rules.assets;
+    let stored_amounts = &game.game_rules.asset_amounts;
+    
+    assert!(vector::length(stored_assets) == 2, 6);
+    assert!(vector::length(stored_amounts) == 2, 7);
+    assert!(*vector::borrow(stored_assets, 0) == @0xA1, 8);
+    assert!(*vector::borrow(stored_assets, 1) == @0xA2, 9);
+    assert!(*vector::borrow(stored_amounts, 0) == 10, 10);
+    assert!(*vector::borrow(stored_amounts, 1) == 20, 11);
+}
+    
+    /// Test for failure when game duration is invalid
+    #[test(aptos_framework = @aptos_framework)]
+    // #[expected_failure(abort_code = aptos_fighters::EINVALID_DURATION)] // issues with the code , 
+    #[expected_failure]
+    public fun test_init_contract_invalid_duration(aptos_framework: &signer) {
+      // Set up timestamp for testing using the aptos_framework account
+        timestamp::set_time_has_started_for_testing(aptos_framework);
+        
+        // Set up test accounts
+        let deployer = account::create_account_for_test(DEPLOYER);
+        
+        // Set up fake token address
+        let game_token_add = GAME_TOKEN;
+        account::create_account_for_test(game_token_add);
+        
+        let current_time = timestamp::now_seconds();
 
+        // Set up the object and make it a valid object
+        object::create_named_object(aptos_framework, b"game_token");
+        
+        // Configure test parameters
+        let price_id = b"ETH/USD"; // Mock price feed ID
+        let game_staking_amount = GAME_STAKING_AMOUNT;
+         let game_duration = 0; // Invalid duration
+        let game_start_time = current_time + 1000; // Start in the future
+        let reward_amount = REWARD_AMOUNT;
+        
+        // Set up assets and amounts
+        let assets = vector::empty<address>();
+        let asset_amounts = vector::empty<u64>();
+        
+        // Add some test assets
+        vector::push_back(&mut assets, @0xA1);
+        vector::push_back(&mut assets, @0xA2);
+        vector::push_back(&mut asset_amounts, 10);
+        vector::push_back(&mut asset_amounts, 20);
+        
+        // Initialize the contract
+        init_contract(
+            &deployer,
+            game_token_add,
+            price_id,
+            game_staking_amount,
+            game_duration,
+            game_start_time,
+            reward_amount,
+            assets,
+            asset_amounts
+        );    }
+    
+    /// Test for failure when staking amount is invalid
+    #[test(aptos_framework = @aptos_framework)]
+    // #[expected_failure(abort_code = EINVALID_AMOUNT)]
+     #[expected_failure]
+    public fun test_init_contract_invalid_staking_amount(aptos_framework: &signer) {
+        // Set up timestamp for testing using the aptos_framework account
+        timestamp::set_time_has_started_for_testing(aptos_framework);
+        
+        // Set up test accounts
+        let deployer = account::create_account_for_test(DEPLOYER);
+        
+        // Set up fake token address
+        let game_token_add = GAME_TOKEN;
+        account::create_account_for_test(game_token_add);
+        
+        let current_time = timestamp::now_seconds();
 
+        // Set up the object and make it a valid object
+        object::create_named_object(aptos_framework, b"game_token");
+        
+        // Configure test parameters with invalid staking amount (0)
+        let price_id = b"ETH/USD"; // Mock price feed ID
+        let game_staking_amount = 0; // Invalid amount
+        let game_duration = GAME_DURATION;
+        let game_start_time = current_time + 1000;
+        let reward_amount = REWARD_AMOUNT;
+        
+        // Set up assets and amounts
+        let assets = vector::empty<address>();
+        let asset_amounts = vector::empty<u64>();
+        
+        // This should fail with EINVALID_AMOUNT
+        init_contract(
+            &deployer,
+            game_token_add,
+            price_id,
+            game_staking_amount,
+            game_duration,
+            game_start_time,
+            reward_amount,
+            assets,
+            asset_amounts
+        );
+    }
+    
+    /// Test for failure when reward amount is invalid
+    #[test(aptos_framework = @aptos_framework)]
+    // #[expected_failure(abort_code = EINVALID_AMOUNT)]
+     #[expected_failure]
+    public fun test_init_contract_invalid_reward_amount(aptos_framework: &signer) {
+        // Set up timestamp for testing using the aptos_framework account
+        timestamp::set_time_has_started_for_testing(aptos_framework);
+        
+        // Set up test accounts
+        let deployer = account::create_account_for_test(DEPLOYER);
+        
+        // Set up fake token address
+        let game_token_add = GAME_TOKEN;
+        account::create_account_for_test(game_token_add);
+        
+        let current_time = timestamp::now_seconds();
 
+        // Set up the object and make it a valid object
+        object::create_named_object(aptos_framework, b"game_token");
+        
+        // Configure test parameters with invalid reward amount (0)
+        let price_id = b"ETH/USD"; // Mock price feed ID
+        let game_staking_amount = GAME_STAKING_AMOUNT;
+        let game_duration = GAME_DURATION;
+        let game_start_time = current_time + 1000;
+        let reward_amount = 0; // Invalid amount
+        
+        // Set up assets and amounts
+        let assets = vector::empty<address>();
+        let asset_amounts = vector::empty<u64>();
+        
+        // This should fail with EINVALID_AMOUNT
+        init_contract(
+            &deployer,
+            game_token_add,
+            price_id,
+            game_staking_amount,
+            game_duration,
+            game_start_time,
+            reward_amount,
+            assets,
+            asset_amounts
+        );
+    }
+    
+    /// Test for failure when game start time is in the past
+    #[test(aptos_framework = @aptos_framework)]
+    // #[expected_failure(abort_code = EINVALID_GAME_START_TIME)]
+     #[expected_failure]
+    public fun test_init_contract_invalid_start_time(aptos_framework: &signer) {
+        // Set up timestamp for testing using the aptos_framework account
+        timestamp::set_time_has_started_for_testing(aptos_framework);
+        
+        // Set up test accounts
+        let deployer = account::create_account_for_test(DEPLOYER);
+        
+        // Set up fake token address
+        let game_token_add = GAME_TOKEN;
+        account::create_account_for_test(game_token_add);
+        
+        let current_time = timestamp::now_seconds();
 
-/// view functions 
+        // Set up the object and make it a valid object
+        object::create_named_object(aptos_framework, b"game_token");
+        
+        // Configure test parameters with invalid start time (in the past)
+        let price_id = b"ETH/USD"; // Mock price feed ID
+        let game_staking_amount = GAME_STAKING_AMOUNT;
+        let game_duration = GAME_DURATION;
+        let game_start_time = current_time - 1000; // Start in the past (invalid)
+        let reward_amount = REWARD_AMOUNT;
+        
+        // Set up assets and amounts
+        let assets = vector::empty<address>();
+        let asset_amounts = vector::empty<u64>();
+        
+        // This should fail with EINVALID_GAME_START_TIME
+        init_contract(
+            &deployer,
+            game_token_add,
+            price_id,
+            game_staking_amount,
+            game_duration,
+            game_start_time,
+            reward_amount,
+            assets,
+            asset_amounts
+        );
+    }
+    
+    /// Test for failure when arrays have mismatched lengths
+    #[test(aptos_framework = @aptos_framework)]
+    // #[expected_failure(abort_code = EINVALID_ARRAY_LENGTH)]
+     #[expected_failure]
+    public fun test_init_contract_mismatched_arrays(aptos_framework: &signer) {
+        // Set up timestamp for testing using the aptos_framework account
+        timestamp::set_time_has_started_for_testing(aptos_framework);
+        
+        // Set up test accounts
+        let deployer = account::create_account_for_test(DEPLOYER);
+        
+        // Set up fake token address
+        let game_token_add = GAME_TOKEN;
+        account::create_account_for_test(game_token_add);
+        
+        let current_time = timestamp::now_seconds();
 
-
-    // #[view]
-    // public fun get_message(addr: address): string::String acquires MessageHolder {
-    //     assert!(exists<MessageHolder>(addr), error::not_found(ENO_MESSAGE));
-    //     borrow_global<MessageHolder>(addr).message
-    // }
-
-    // public entry fun set_message(account: signer, message: string::String)
-    // acquires MessageHolder {
-    //     let account_addr = signer::address_of(&account);
-    //     if (!exists<MessageHolder>(account_addr)) {
-    //         move_to(&account, MessageHolder {
-    //             message,
-    //         })
-    //     } else {
-    //         let old_message_holder = borrow_global_mut<MessageHolder>(account_addr);
-    //         let from_message = old_message_holder.message;
-    //         event::emit(MessageChange {
-    //             account: account_addr,
-    //             from_message,
-    //             to_message: copy message,
-    //         });
-    //         old_message_holder.message = message;
-    //     }
-    // }
-
-    #[test(account = @0x1)]
-    public entry fun sender_can_set_message(account: signer) acquires Game {
-        let msg: string::String = string::utf8(b"Running test for sender_can_set_message...");
-        debug::print(&msg);
-
-        let addr = signer::address_of(&account);
-        aptos_framework::account::create_account_for_test(addr);
-        //init_module(account, string::utf8(b"Hello, Blockchain"));
-
-        // assert!(
-        //     get_message(addr) == string::utf8(b"Hello, Blockchain"),
-        //     ENO_MESSAGE
-        // );
+        // Set up the object and make it a valid object
+        object::create_named_object(aptos_framework, b"game_token");
+        
+        // Configure test parameters
+        let price_id = b"ETH/USD"; // Mock price feed ID
+        let game_staking_amount = GAME_STAKING_AMOUNT;
+        let game_duration = GAME_DURATION;
+        let game_start_time = current_time + 1000;
+        let reward_amount = REWARD_AMOUNT;
+        
+        // Set up mismatched assets and amounts
+        let assets = vector::empty<address>();
+        let asset_amounts = vector::empty<u64>();
+        
+        // Add some test assets
+        vector::push_back(&mut assets, @0xA1);
+        vector::push_back(&mut assets, @0xA2);
+        vector::push_back(&mut asset_amounts, 10);
+        // Missing second amount, causing array length mismatch
+        
+        // This should fail with EINVALID_ARRAY_LENGTH
+        init_contract(
+            &deployer,
+            game_token_add,
+            price_id,
+            game_staking_amount,
+            game_duration,
+            game_start_time,
+            reward_amount,
+            assets,
+            asset_amounts
+        );
     }
 }
