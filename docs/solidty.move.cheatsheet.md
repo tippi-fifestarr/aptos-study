@@ -106,7 +106,40 @@ fun init_module(owner: &signer) {
     move_to(owner, Billboard { messages: vector[], oldest_index: 0 })
 }
 ```
+> notes about using acquires in move from Claude 
+```txt
+The `acquires` keyword in Move is used to explicitly declare what resources a function needs to access from global storage. It's a key feature of Move's safety and permission system.
 
+Here's why we use `acquires`:
+
+1. **Memory Safety**: It explicitly declares which resources a function will read from or write to in global storage, making memory access patterns clear.
+
+2. **Static Verification**: The Move compiler can statically verify that a function only accesses the resources it declares, preventing unauthorized access to other resources.
+
+3. **Preventing Reentrancy Attacks**: By forcing explicit declaration of resource access, the compiler can detect potential reentrancy issues where a function might indirectly access a resource it's already modifying.
+
+4. **Documentation**: It serves as documentation for developers, making it clear what global state a function interacts with.
+
+For example, in your code:
+
+```move
+#[test(account = @0x1)]
+public entry fun sender_can_set_message(account: signer) acquires Game {
+    // This tells the compiler that this function will access the Game resource
+}
+```
+
+When you use functions like `borrow_global<Game>()` or `borrow_global_mut<Game>()` to access a Game resource from global storage, you must declare `acquires Game` on that function.
+
+You don't need `acquires` when you're:
+1. Only creating new resources (using `move_to`)
+2. Not accessing any existing resources
+3. Only accessing resources through accessor functions that themselves have the appropriate `acquires` annotations
+
+That's why you correctly noted you don't need `acquires Game` in your `init_contract` function - you're only creating a new Game resource, not accessing an existing one.
+
+
+```
 ### Functions
 
 **Solidity**
