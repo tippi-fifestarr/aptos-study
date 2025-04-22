@@ -35,8 +35,27 @@ struct Todo has key, store, copy {
     content : string::String,
     is_completed: bool,
 }
-
-
     //<:!:resource
+    //<:!: constructor like :D 
 
+
+    fun init_module(singer: &signer){
+        // should init contract here ,
+        // @notice , is optional,
+        // @notice , only signer is expected as param here 
+    }
+
+
+
+    public entry fun create_user_todo_list(user:&signer) acquires UserTodoListCounter{
+        // check if user has one , if yes increase the counter 
+        let user_address = signer::address_of(user);
+        let counter = if ( exists<UserTodoListCounter>(user_address)){
+            let counter = borrow_global<UserTodoListCounter>(user_address);
+            counter.counter
+        }else {
+            move_to(user,UserTodoListCounter{counter:0});
+                0            
+        };
+    }
 }
