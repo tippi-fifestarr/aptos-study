@@ -77,7 +77,22 @@ struct Todo has key, store, copy {
         let counter_mut = borrow_global_mut<UserTodoListCounter>(user_address);
         counter_mut.counter= counter_mut.counter+1;
     }
+    public entry fun add_todo ( owner:&signer, content:string::String, todo_list_index:u64) acquires TodoList{
+        let owner_add = signer::address_of(owner);
+        // check if user has a todo  
+    
+        let obj_add = object::create_object_address(&owner_add,construct_todo_list_object_seed(todo_list_index));
+        assert!(exists<TodoList>(obj_add),E_TODO_LIST_DOSE_NOT_EXIST);
 
+        let todo_list_mut = borrow_global_mut<TodoList>(obj_add);
+        let new_todo = Todo{
+            content:content,
+            is_completed:false,
+        };
+        //  you still need to explicitly use &mut to access and modify fields within it
+        vector::push_back(&mut todo_list_mut.todos,  new_todo);
+
+    }
 
 // helper functions 
        fun construct_todo_list_object_seed(counter: u64): vector<u8> {
