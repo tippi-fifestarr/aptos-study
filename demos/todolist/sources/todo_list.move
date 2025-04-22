@@ -3,6 +3,10 @@ module todo_list_add::todo_list {
     use std::signer;
     use std::string;
     use aptos_framework::event;
+    use aptos_std::string_utils;
+    use std::bcs;
+    use aptos_framework::object;
+
     #[test_only]
     use std::debug;
 
@@ -57,5 +61,20 @@ struct Todo has key, store, copy {
             move_to(user,UserTodoListCounter{counter:0});
                 0            
         };
+        // create address that will hold the todo list 
+        // This type is not deletable and has a deterministic address. You can create it by using: 0x1::object::create_named_object(creator: &signer, seed: vector<u8>). ref : https://aptos.dev/en/build/smart-contracts/object/creating-objects
+        let obj_hold_add = object::create_named_object(
+            // singer , seed 
+            user, construct_todo_list_object_seed(counter)
+        );
+        let obj_add = object::generate_signer(&obj_hold_add);
+    }
+
+
+// helper functions 
+       fun construct_todo_list_object_seed(counter: u64): vector<u8> {
+        // The seed must be unique per todo list creator
+        //Wwe add contract address as part of the seed so seed from 2 todo list contract for same user would be different
+        bcs::to_bytes(&string_utils::format2(&b"{}_{}", @todo_list_add, counter))
     }
 }
