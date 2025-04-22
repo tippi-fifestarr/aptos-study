@@ -1,12 +1,13 @@
 [package]
-name = "HelloBlockchainExample"
+name = "ToDoList"
 version = "1.0.0"
 authors = []
 
 [addresses]
-hello_blockchain = "_"
+todo_list_add = "_"
 
 [dev-addresses]
+todo_list_add = "0x554"
 
 [dependencies.AptosFramework]
 git = "https://github.com/aptos-labs/aptos-framework.git"

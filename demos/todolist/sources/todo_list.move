@@ -1,4 +1,4 @@
-module hello_blockchain::message {
+module todo_list_add::message {
     use std::error;
     use std::signer;
     use std::string;
