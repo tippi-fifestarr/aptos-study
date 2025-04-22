@@ -6,6 +6,7 @@ module todo_list_add::todo_list {
     use aptos_std::string_utils;
     use std::bcs;
     use aptos_framework::object;
+    use std::vector;
 
     #[test_only]
     use std::debug;
@@ -68,6 +69,13 @@ struct Todo has key, store, copy {
             user, construct_todo_list_object_seed(counter)
         );
         let obj_add = object::generate_signer(&obj_hold_add);
+        let todo = TodoList{
+            owner: user_address,
+            todos: vector::empty(),
+        };
+        move_to(&obj_add,todo);
+        let counter_mut = borrow_global_mut<UserTodoListCounter>(user_address);
+        counter_mut.counter= counter_mut.counter+1;
     }
 
 
