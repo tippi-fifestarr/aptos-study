@@ -294,7 +294,15 @@ That's why you correctly noted you don't need `acquires Game` in your `init_cont
     
     move_to(deployer, game);
 }
+public entry fun enroll_player(sender:&signer, deployer:address) acquires Game{
+    let game = borrow_global_mut<Game>(deployer);
+    assert!(game.game_rules.game_start_time> timestamp::now_seconds(),error::invalid_argument(EGAME_IN_PROGRESS) );
+    assert!(game.player1 == @0x0 || game.player2 == @0x0, error::invalid_argument(EGAME_IS_FULL));
+    assert!(game.player1 != signer::address_of(sender) || game.player2 != signer::address_of(sender), error::invalid_argument(ENOT_AUTHORIZED));
+     //let metadata = object::address_to_object<Token>(game.game_token);
+    //primary_fungible_store::transfer(sender, metadata, //@aptos_fighters_address, game.game_rules.game_staking_amount); // how can we transfer it to the contract itself ??? 
 
+}
 /**
     function enrollPlayer() external {
         // Check if game start time has passed
