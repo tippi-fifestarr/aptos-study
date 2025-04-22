@@ -118,4 +118,86 @@ struct Todo has key, store, copy {
         //Wwe add contract address as part of the seed so seed from 2 todo list contract for same user would be different
         bcs::to_bytes(&string_utils::format2(&b"{}_{}", @todo_list_add, counter))
     }
+
+
+    #[test(framework = @0x1, admin = @todo_list_add, user = @0x123)]
+fun test_todo_list_end_to_end(framework: &signer, admin: &signer, user: &signer) acquires TodoList, UserTodoListCounter{
+    use aptos_framework::account;
+    
+    // Set up test environment
+    account::create_account_for_test(signer::address_of(framework));
+    account::create_account_for_test(signer::address_of(admin));
+    account::create_account_for_test(signer::address_of(user));
+    
+    // Create a new todo list for the user
+    create_user_todo_list(user);
+    
+    // Get the user address
+    let user_address = signer::address_of(user);
+    
+    // Verify the counter was created and set to 1
+    assert!(exists<UserTodoListCounter>(user_address), 0);
+    let counter = borrow_global<UserTodoListCounter>(user_address);
+    assert!(counter.counter == 1, 1);
+    
+    // Calculate the object address for the created todo list
+    let todo_list_index = 0; // First todo list has index 0
+    let obj_add = object::create_object_address(&user_address, construct_todo_list_object_seed(todo_list_index));
+    
+    // Verify the todo list exists
+    assert!(exists<TodoList>(obj_add), 2);
+    
+    // Add two todos to the list
+    let todo_content1 = string::utf8(b"Buy groceries");
+    let todo_content2 = string::utf8(b"Finish Move homework");
+    
+    add_todo(user, todo_content1, todo_list_index);
+    add_todo(user, todo_content2, todo_list_index);
+    
+    // Verify the todos were added
+    let todo_list = borrow_global<TodoList>(obj_add);
+    assert!(vector::length(&todo_list.todos) == 2, 3);
+    
+    // Verify todo contents - get copies of the strings for comparison
+    let first_todo = vector::borrow(&todo_list.todos, 0);
+    let second_todo = vector::borrow(&todo_list.todos, 1);
+    
+    // Convert string to bytes and then work with the actual bytes value, not reference
+    let first_content_bytes = *string::bytes(&first_todo.content);
+    let second_content_bytes = *string::bytes(&second_todo.content);
+    
+    assert!(first_content_bytes == b"Buy groceries", 4);
+    assert!(second_content_bytes == b"Finish Move homework", 5);
+    
+    // Verify both todos are not completed
+    assert!(!first_todo.is_completed, 6);
+    assert!(!second_todo.is_completed, 7);
+    
+    // Complete the first todo
+    finish_todo(user, todo_list_index, 0);
+    
+    // Verify the first todo is now completed
+    let todo_list = borrow_global<TodoList>(obj_add);
+    let first_todo = vector::borrow(&todo_list.todos, 0);
+    let second_todo = vector::borrow(&todo_list.todos, 1);
+    
+    assert!(first_todo.is_completed, 8);
+    assert!(!second_todo.is_completed, 9);
+    
+    // Try creating another todo list for the same user
+    create_user_todo_list(user);
+    
+    // Verify counter was incremented
+    let counter = borrow_global<UserTodoListCounter>(user_address);
+    assert!(counter.counter == 2, 10);
+    
+    // Calculate the object address for the second todo list
+    let second_todo_list_index = 1; // Second todo list has index 1
+    let second_obj_add = object::create_object_address(&user_address, construct_todo_list_object_seed(second_todo_list_index));
+    
+    // Verify the second todo list exists
+    assert!(exists<TodoList>(second_obj_add), 11);
+    
+    debug::print(&b"All tests passed!");
+}
 }
