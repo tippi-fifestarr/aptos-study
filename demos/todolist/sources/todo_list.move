@@ -94,6 +94,24 @@ struct Todo has key, store, copy {
 
     }
 
+
+    public entry fun finish_todo(owner :& signer, todo_list_index:u64, todo_idx: u64) acquires TodoList{
+        let owner_add = signer::address_of(owner);
+        let obj_add = object::create_object_address(&owner_add,construct_todo_list_object_seed(todo_list_index));
+        assert!(exists<TodoList>(obj_add),E_TODO_LIST_DOSE_NOT_EXIST);
+             let todo_list_mut = borrow_global_mut<TodoList>(obj_add);
+     
+     assert!(
+            todo_idx < vector::length(&todo_list_mut.todos),
+            E_TODO_DOSE_NOT_EXIST
+        );
+        let todo_record = vector::borrow_mut(&mut todo_list_mut.todos,todo_idx);
+        assert!(todo_record.is_completed == false, E_TODO_ALREADY_COMPLETED);
+
+        todo_record.is_completed=true;
+
+
+    }
 // helper functions 
        fun construct_todo_list_object_seed(counter: u64): vector<u8> {
         // The seed must be unique per todo list creator
