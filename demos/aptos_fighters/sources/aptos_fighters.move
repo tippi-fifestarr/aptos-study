@@ -64,6 +64,12 @@ module aptos_fighters_address::aptos_fighters {
 
     GameRules public gameRules;
 */
+
+/// we have to add this to use a resource account pattern to properly manage transfers suggested by claude
+struct ModuleData has key {
+    signer_cap: account::SignerCapability,
+    // other module data
+}
     struct GameRules has store, drop,copy {
          game_staking_amount:u64,
          game_duration:u64,
@@ -225,6 +231,16 @@ For something like InsufficientBalance(uint256 required, uint256 available),
     }*/
 /// init 
 // note: pyth works slightly different than chainlink , we just need to add the price id, pyth address is fixed
+fun init_module(deployer: &signer) {
+    let seed = b"aptos_fighters";
+    let (resource_signer, resource_signer_cap) = account::create_resource_account(deployer, seed);
+    
+    // Store the signer capability
+    move_to(deployer, ModuleData {
+        signer_cap: resource_signer_cap,
+        // other fields
+    });
+}
 // public entry fun init_contract(game_token: Object<Token>,price_id: vector<u8> ,game_rule :Object<GameRules>) {
 public entry fun init_contract(
 deployer: &signer, // we have to use it, although the contract should not be ownable but i can't use move_to without singer 
@@ -319,10 +335,8 @@ public entry fun enroll_player(player:&signer, deployer:address) acquires Game{
     assert!(game.game_rules.game_start_time> timestamp::now_seconds(),error::invalid_argument(EGAME_IN_PROGRESS) );
     assert!(game.player1 == @0x0 || game.player2 == @0x0, error::invalid_argument(EGAME_IS_FULL));
     assert!(game.player1 != signer::address_of(player) || game.player2 != signer::address_of(player), error::invalid_argument(ENOT_AUTHORIZED));
-     let metadata = object::address_to_object<Metadata>(game.game_token);
-    primary_fungible_store::transfer(player, metadata, @aptos_fighters_address, game.game_rules.game_staking_amount); // how can we transfer it to the contract itself ??? 
-    
-  let i = 0;
+    stake(player,  game.game_token, game.game_rules.game_staking_amount); 
+    let i = 0;
         let length = vector::length(& game.game_rules.assets);
         while (i < length) {
           let asset=   vector::borrow(& game.game_rules.assets, i);
@@ -627,6 +641,41 @@ public entry fun sell_apt (player:&signer, amount:u64, deployer:address) acquire
         emit RewardClaimed(msg.sender, amountToReturn, isWinner);
     }*/
 // helper 
+
+
+fun transfer_from_contract(
+    player_add: address, 
+    game_token: address, 
+    amount_to_withdraw: u64
+) acquires ModuleData {
+    // Get module address - this should be the same as @aptos_fighters_address
+    let module_addr = @aptos_fighters_address;
+    
+    // Get the resource signer using the stored capability
+    let module_data = borrow_global<ModuleData>(module_addr);
+    let resource_signer = account::create_signer_with_capability(&module_data.signer_cap);
+    
+    // Get the token metadata
+    let metadata = object::address_to_object<Metadata>(game_token);
+    
+    // Transfer tokens from the contract to the player
+    primary_fungible_store::transfer(&resource_signer, metadata, player_add, amount_to_withdraw);
+}
+fun stake(
+    player: &signer, 
+    game_token: address, 
+    amount: u64
+)  {
+  
+     // Get module/contract address
+    let module_addr = @aptos_fighters_address;
+    
+    // Get the token metadata
+    let metadata = object::address_to_object<Metadata>(game_token);
+    
+    // Transfer tokens from player to the contract
+    primary_fungible_store::transfer(player, metadata, module_addr, amount);
+}
 // @dev @notice @todo : we should update the price , but this would require paying for this in aptos coin, we are just skipping this for now , will do it later 
 fun fetch_price(asset_price_identifier : vector<u8>) :  Price{
      // Read the current price from a price feed.
