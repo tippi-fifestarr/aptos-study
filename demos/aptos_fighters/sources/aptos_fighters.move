@@ -442,7 +442,13 @@ public entry fun buy_apt (player:&signer, amount:u64, deployer:address) acquires
                 userAsset2Balance[msg.sender] -= cost;*/
                 asset1_balance.balance=   asset1_balance.balance+ amount;
                 asset2_balance.balance=   asset2_balance.balance- cost;
-
+            // emit event 
+            event::emit(AssetTraded{
+                player: player_add,
+                price: price_in_aptos_coin,
+                asset_amount: amount,
+                is_buy: true,
+            });
 }
 
         /** function buyEth(uint256 amount) external onlyPlayers returns (bool) {
