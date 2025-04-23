@@ -576,22 +576,34 @@ public entry fun sell_apt (player:&signer, amount:u64, deployer:address) acquire
         return true;
     }*/
 
-    public entry fun withdraw (player:&signer, deployer:address) acquires Game{
+    public entry fun withdraw (player:&signer, deployer:address) acquires Game , ModuleData{
         let game = borrow_global_mut<Game>(get_game_address(deployer,1));
         let player_add = signer::address_of(player);
         assert!(game.player1==player_add || game.player2==player_add, ENOT_AUTHORIZED);
         assert!(timestamp::now_seconds()>game.game_rules.game_start_time+ game.game_rules.game_duration, EGAME_NOT_ENDED);
         // Determine if the caller is player1 or player2
-        let amount_to_withdraw = game.game_rules.reward_amount;
+        let amount_to_withdraw =game.game_rules.game_staking_amount;
         // let is_Player1 = ( == game.player1);
-        let (winner,amount)= get_winner(game);
+        let (winner,amount)= get_winner_fun(game);
+        // since we only expect player1 or 2 because of the above assert , we can safely do if/else
+        if ( game.player1== player_add){
+            assert!(!game.player1_reward_claimed, EREWARD_ALREADY_CLAIMED);
+         
+        }else{ // if not player one , s/he is 100% player 2
+             assert!(!game.player2_reward_claimed, EREWARD_ALREADY_CLAIMED);
 
-   
-    let metadata = object::address_to_object<Metadata>(game.game_token);
+        };
+   if (winner==player_add){
+                amount_to_withdraw= amount_to_withdraw+ game.game_rules.reward_amount;
+            };
     // @todo : not working because we need a signer 
     // primary_fungible_store::transfer(@aptos_fighters_address, metadata, player_add,amount_to_withdraw); // how can we transfer it to the contract itself ??? 
-
-
+        
+        transfer_from_contract(player_add,game.game_token, amount_to_withdraw);
+        event::emit(RewardClaimed{  
+         account: player_add,
+        amount: amount_to_withdraw,
+        is_winner: winner==player_add});
     }
 
 
@@ -694,7 +706,13 @@ fun fetch_price(asset_price_identifier : vector<u8>) :  Price{
 
     // }
         /// view functions 
+#[view]
+public fun get_winner (deployer:address):(address, u64) acquires Game{
+ let game = borrow_global<Game>(get_game_address(deployer,1));
+ assert!(timestamp::now_seconds()>game.game_rules.game_start_time+ game.game_rules.game_duration, EGAME_NOT_ENDED);
+ get_winner_fun(game)
 
+}
 /*   function getWinner() external view returns (address) {
         // Check if the game has ended
         if (
@@ -723,7 +741,7 @@ fun fetch_price(asset_price_identifier : vector<u8>) :  Price{
 
     
     */
-fun get_winner(game: &Game): (address, u64) {
+fun get_winner_fun(game: &Game): (address, u64) {
     let player1 = game.player1;
     let player2 = game.player2;
     
