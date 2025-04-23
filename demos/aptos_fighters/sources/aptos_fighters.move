@@ -1,5 +1,6 @@
 module aptos_fighters_address::aptos_fighters {
     use std::error;
+    
     use std::signer;
     use std::string::{Self, String};
     use std::vector;
@@ -12,9 +13,12 @@ module aptos_fighters_address::aptos_fighters {
     use aptos_framework::event;
     use aptos_framework::coin;
     use aptos_token::token::{Self, Token};
-    use pyth::pyth;
-    use pyth::price::Price;
+ use pyth::pyth;
     use pyth::price_identifier;
+    use pyth::i64;
+    use pyth::price::{Self,Price};
+
+    use aptos_std::math64::pow;
     use aptos_framework::account;
     #[test_only]
     use std::debug;
@@ -163,6 +167,10 @@ Note that unlike Solidity, Move doesn't support parameterized errors.
 For something like InsufficientBalance(uint256 required, uint256 available),
  you would typically emit an event before aborting to include that additional information.
 */
+
+
+    const OCTAS_PER_APTOS: u64 = 100000000;
+
     /// There is no message present
     const EINVALID_ADDRESS: u64 = 1;
     const EINVALID_AMOUNT: u64 = 2;
@@ -229,40 +237,40 @@ deployer: &signer, // we have to use it, although the contract should not be own
     assets: vector<address>,
     asset_amounts: vector<u64>
 ) { // so acquire we use when we read storage ? need to validate 
-/**here is what claude said : 
-The `acquires` keyword in Move is used to explicitly declare what resources a function needs to access from global storage. It's a key feature of Move's safety and permission system.
+            /**here is what claude said : 
+            The `acquires` keyword in Move is used to explicitly declare what resources a function needs to access from global storage. It's a key feature of Move's safety and permission system.
 
-Here's why we use `acquires`:
+            Here's why we use `acquires`:
 
-1. **Memory Safety**: It explicitly declares which resources a function will read from or write to in global storage, making memory access patterns clear.
+            1. **Memory Safety**: It explicitly declares which resources a function will read from or write to in global storage, making memory access patterns clear.
 
-2. **Static Verification**: The Move compiler can statically verify that a function only accesses the resources it declares, preventing unauthorized access to other resources.
+            2. **Static Verification**: The Move compiler can statically verify that a function only accesses the resources it declares, preventing unauthorized access to other resources.
 
-3. **Preventing Reentrancy Attacks**: By forcing explicit declaration of resource access, the compiler can detect potential reentrancy issues where a function might indirectly access a resource it's already modifying.
+            3. **Preventing Reentrancy Attacks**: By forcing explicit declaration of resource access, the compiler can detect potential reentrancy issues where a function might indirectly access a resource it's already modifying.
 
-4. **Documentation**: It serves as documentation for developers, making it clear what global state a function interacts with.
+            4. **Documentation**: It serves as documentation for developers, making it clear what global state a function interacts with.
 
-For example, in your code:
+            For example, in your code:
 
-```move
-#[test(account = @0x1)]
-public entry fun sender_can_set_message(account: signer) acquires Game {
-    // This tells the compiler that this function will access the Game resource
-}
-```
+            ```move
+            #[test(account = @0x1)]
+            public entry fun sender_can_set_message(account: signer) acquires Game {
+                // This tells the compiler that this function will access the Game resource
+            }
+            ```
 
-When you use functions like `borrow_global<Game>()` or `borrow_global_mut<Game>()` to access a Game resource from global storage, you must declare `acquires Game` on that function.
+            When you use functions like `borrow_global<Game>()` or `borrow_global_mut<Game>()` to access a Game resource from global storage, you must declare `acquires Game` on that function.
 
-You don't need `acquires` when you're:
-1. Only creating new resources (using `move_to`)
-2. Not accessing any existing resources
-3. Only accessing resources through accessor functions that themselves have the appropriate `acquires` annotations
+            You don't need `acquires` when you're:
+            1. Only creating new resources (using `move_to`)
+            2. Not accessing any existing resources
+            3. Only accessing resources through accessor functions that themselves have the appropriate `acquires` annotations
 
-That's why you correctly noted you don't need `acquires Game` in your `init_contract` function - you're only creating a new Game resource, not accessing an existing one.
+            That's why you correctly noted you don't need `acquires Game` in your `init_contract` function - you're only creating a new Game resource, not accessing an existing one.
 
 
 
-*/
+            */
     // Check input data
     assert!(game_duration > 0, error::invalid_argument(EINVALID_DURATION));
     assert!(game_staking_amount > 0, error::invalid_argument(EINVALID_AMOUNT));
@@ -305,7 +313,8 @@ That's why you correctly noted you don't need `acquires Game` in your `init_cont
     move_to(&obj_add, game);
 }
 public entry fun enroll_player(sender:&signer, deployer:address) acquires Game{
-    let game = borrow_global_mut<Game>(deployer);
+    
+    let game = borrow_global_mut<Game>(get_game_address(deployer,1));
     let sender_addr = signer::address_of(sender);
     assert!(game.game_rules.game_start_time> timestamp::now_seconds(),error::invalid_argument(EGAME_IN_PROGRESS) );
     assert!(game.player1 == @0x0 || game.player2 == @0x0, error::invalid_argument(EGAME_IS_FULL));
@@ -346,101 +355,164 @@ public entry fun enroll_player(sender:&signer, deployer:address) acquires Game{
 
         
 }
-/**
-    function enrollPlayer() external {
-        // Check if game start time has passed
-        if (block.timestamp >= gameRules.gameStartTime) revert GameInProgress();
+        /**
+            function enrollPlayer() external {
+                // Check if game start time has passed
+                if (block.timestamp >= gameRules.gameStartTime) revert GameInProgress();
 
-        // Check player is not already enrolled
-        if (msg.sender == player1 || msg.sender == player2)
-            revert NotAuthorized();
+                // Check player is not already enrolled
+                if (msg.sender == player1 || msg.sender == player2)
+                    revert NotAuthorized();
 
-        // Check if game is full
-        if (player1 != address(0) && player2 != address(0)) revert GameIsFull();
+                // Check if game is full
+                if (player1 != address(0) && player2 != address(0)) revert GameIsFull();
 
-        // Stake the game token
-        gameToken.safeTransferFrom(
-            msg.sender,
-            address(this),
-            gameRules.gameStakingAmount
-        );
-
-        // Transfer required assets
-        uint256 assetCount = gameRules.assets.length;
-        for (uint256 i = 0; i < assetCount; ++i) {
-            IERC20 asset = IERC20(gameRules.assets[i]);
-            uint256 requiredAmount = gameRules.assetAmounts[i];
-
-            if (asset.balanceOf(msg.sender) < requiredAmount) {
-                revert InsufficientBalance(
-                    requiredAmount,
-                    asset.balanceOf(msg.sender)
+                // Stake the game token
+                gameToken.safeTransferFrom(
+                    msg.sender,
+                    address(this),
+                    gameRules.gameStakingAmount
                 );
+
+                // Transfer required assets
+                uint256 assetCount = gameRules.assets.length;
+                for (uint256 i = 0; i < assetCount; ++i) {
+                    IERC20 asset = IERC20(gameRules.assets[i]);
+                    uint256 requiredAmount = gameRules.assetAmounts[i];
+
+                    if (asset.balanceOf(msg.sender) < requiredAmount) {
+                        revert InsufficientBalance(
+                            requiredAmount,
+                            asset.balanceOf(msg.sender)
+                        );
+                    }
+
+                    asset.safeTransferFrom(msg.sender, address(this), requiredAmount);
+                }
+
+                // Register player
+                if (player1 == address(0)) {
+                    player1 = msg.sender;
+                } else {
+                    player2 = msg.sender;
+                }
+
+                // Initialize player balances
+                userAsset1Balance[msg.sender] = 100; // Give some initial balance for gameplay
+                userAsset2Balance[msg.sender] = 10000; // Give some initial balance for gameplay
+
+                emit PlayerEnrolled(msg.sender);
+
+                // If both players are enrolled, update game status
+                if (player1 != address(0) && player2 != address(0)) {
+                    // Check if game should start immediately
+                    if (block.timestamp >= gameRules.gameStartTime) {
+                        emit GameStarted(block.timestamp, gameRules.gameDuration);
+                    }
+                }
             }
-
-            asset.safeTransferFrom(msg.sender, address(this), requiredAmount);
-        }
-
-        // Register player
-        if (player1 == address(0)) {
-            player1 = msg.sender;
-        } else {
-            player2 = msg.sender;
-        }
-
-        // Initialize player balances
-        userAsset1Balance[msg.sender] = 100; // Give some initial balance for gameplay
-        userAsset2Balance[msg.sender] = 10000; // Give some initial balance for gameplay
-
-        emit PlayerEnrolled(msg.sender);
-
-        // If both players are enrolled, update game status
-        if (player1 != address(0) && player2 != address(0)) {
-            // Check if game should start immediately
-            if (block.timestamp >= gameRules.gameStartTime) {
-                emit GameStarted(block.timestamp, gameRules.gameDuration);
-            }
-        }
-    }
-*/
-public entry fun buy_apt (player:&signer, amount:u64)  {
+        */
+public entry fun buy_apt (player:&signer, amount:u64, deployer:address) acquires Game{
+    
+    let game = borrow_global_mut<Game>(get_game_address(deployer,1));
     let player_add = signer::address_of(player);
     // is authorized ? is player i mean 
-    // let game_mut = borrow_global_mut<Game>(deployer);
+    assert!(game.player1==player_add || game.player2==player_add, ENOT_AUTHORIZED);
+    // Check if game has ended
+    assert!(timestamp::now_seconds()< game.game_rules.game_start_time+ game.game_rules.game_duration, EGAME_ENDED);
+    // Skip operation if amount is zero
+    if (amount==0){
+        return
+    };
+     // Fetch current apt price
+
+        let price = fetch_price(game.data_feed);
+        let price_positive = i64::get_magnitude_if_positive(&price::get_price(&price)); // This will fail if the price is negative
+        let expo_magnitude = i64::get_magnitude_if_negative(&price::get_expo(&price)); // This will fail if the exponent is positive
+
+        let price_in_aptos_coin =  (OCTAS_PER_APTOS * pow(10, expo_magnitude)) / price_positive; // 1 USD in APT
+            // Calculate cost
+            let cost = price_in_aptos_coin * amount;
+            // Check player has sufficient balance
+            let asset2_balance = get_user_asset_balance_mut(&mut game.user_asset2_balance,player_add);
+            assert!(asset2_balance.balance >= cost, EINSUFFICIENT_BALANCE);
+               // Update balances
+            let asset1_balance = get_user_asset_balance_mut(&mut game.user_asset1_balance,player_add);
+            /**       userAsset1Balance[msg.sender] += amount;
+                userAsset2Balance[msg.sender] -= cost;*/
+                asset1_balance.balance=   asset1_balance.balance+ amount;
+                asset2_balance.balance=   asset2_balance.balance- cost;
+
 }
-/** function buyEth(uint256 amount) external onlyPlayers returns (bool) {
-        // Check if game has ended
-        if (
-            block.timestamp > gameRules.gameStartTime + gameRules.gameDuration
-        ) {
-            revert GameEnded();
-        }
 
-        // Skip operation if amount is zero
-        if (amount == 0) return true;
+        /** function buyEth(uint256 amount) external onlyPlayers returns (bool) {
+                // Check if game has ended
+                if (
+                    block.timestamp > gameRules.gameStartTime + gameRules.gameDuration
+                ) {
+                    revert GameEnded();
+                }
 
-        // Fetch current ETH price
-        uint256 price = fetchPrice();
+                // Skip operation if amount is zero
+                if (amount == 0) return true;
 
-        // Calculate cost
-        uint256 cost = price * amount;
+                // Fetch current ETH price
+                uint256 price = fetchPrice();
 
-        // Check player has sufficient balance
-        if (userAsset2Balance[msg.sender] < cost) {
-            revert InsufficientBalance(cost, userAsset2Balance[msg.sender]);
-        }
+                // Calculate cost
+                uint256 cost = price * amount;
 
-        // Update balances
-        userAsset1Balance[msg.sender] += amount;
-        userAsset2Balance[msg.sender] -= cost;
+                // Check player has sufficient balance
+                if (userAsset2Balance[msg.sender] < cost) {
+                    revert InsufficientBalance(cost, userAsset2Balance[msg.sender]);
+                }
 
-        emit AssetTraded(msg.sender, true, amount, price);
-        return true;
-    }*/
+                // Update balances
+                userAsset1Balance[msg.sender] += amount;
+                userAsset2Balance[msg.sender] -= cost;
 
-/// view functions 
+                emit AssetTraded(msg.sender, true, amount, price);
+                return true;
+            }*/
+// helper 
+// @dev @notice @todo : we should update the price , but this would require paying for this in aptos coin, we are just skipping this for now , will do it later 
+fun fetch_price(asset_price_identifier : vector<u8>) :  Price{
+     // Read the current price from a price feed.
+        // Each price feed (e.g., BTC/USD) is identified by a price feed ID.
+        // The complete list of feed IDs is available at https://pyth.network/developers/price-feed-ids
+        // Note: Aptos uses the Pyth price feed ID without the `0x` prefix.
+        // let btc_price_identifier = x"e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43";
+        let btc_usd_price_id = price_identifier::from_byte_vec(asset_price_identifier);
+        pyth::get_price(btc_usd_price_id)
+}
+  /// Please read https://docs.pyth.network/documentation/pythnet-price-feeds before using a `Price` in your application
+    // fun update_and_fetch_price(receiver : &signer,  vaas : vector<vector<u8>>) : Price {
+    //         let coins = coin::withdraw<aptos_coin::AptosCoin>(receiver, pyth::get_update_fee(&vaas)); // Get coins to pay for the update
+    //         pyth::update_price_feeds(vaas, coins); // Update price feed with the provided vaas
+    //         pyth::get_price(price_identifier::from_byte_vec(APTOS_USD_PRICE_FEED_IDENTIFIER)) // Get recent price (will fail if price is too old)
+
+    // }
+        /// view functions 
 
 
+// Return a mutable reference to the matching AssetBalance
+
+// Remove #[view] since view functions can't return mutable references
+public fun get_user_asset_balance_mut(
+    asset_balances: &mut vector<AssetBalance>,  // Changed parameter name for clarity
+    user_address: address
+): &mut AssetBalance {
+    let i = 0;
+    while (i < vector::length(asset_balances)) {
+        let balance = vector::borrow_mut(asset_balances, i);  // Changed variable name
+        if (balance.player == user_address) {
+            return balance
+        };
+        i = i + 1;
+    };
+    // Handle case where no matching address is found
+    abort 1 // Or a more specific error code
+}
  #[view]
  public fun get_game_rules (deployer_address :address): GameRules acquires Game{
     // we have to use copy treat, here's why 
