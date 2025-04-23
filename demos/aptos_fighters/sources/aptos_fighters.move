@@ -455,19 +455,23 @@ This is a fundamental safety feature in Move. References returned from functions
     let game = borrow_global<Game>(deployer_address);
     game.game_rules
  }
-
-
-
-    /// Helper function to check if Game exists at an address
-    #[test_only]
-    public fun exists_at(addr: address): bool {
-        exists<Game>(addr)
-    }
 // helper functions 
 #[view]
     public fun construct_seed(seed: u64): vector<u8> {
         //Wwe add contract address as part of the seed so seed from 2 todo list contract for same user would be different
         bcs::to_bytes(&string_utils::format2(&b"{}_{}", @aptos_fighters_address, seed))
+    }
+
+#[view]
+public fun get_game_address(deployer: address, seed: u64): address {
+    // Calculate the object address from the deployer and seed
+    object::create_object_address(&deployer, construct_seed(seed))
+}
+
+    /// Helper function to check if Game exists at an address
+    #[test_only]
+    public fun exists_at(addr: address): bool {
+        exists<Game>(addr)
     }
 
     
