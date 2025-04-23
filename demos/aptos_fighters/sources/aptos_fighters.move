@@ -17,6 +17,10 @@ module aptos_fighters_address::aptos_fighters {
     use aptos_framework::account;
     #[test_only]
     use std::debug;
+
+
+    const ASSET1_DEFAULT_BALANCE:u64=10000000;
+    const ASSET2_DEFAULT_BALANCE:u64=1000000000000;
 /*   
 
  ========== STATE VARIABLES ========== 
@@ -65,7 +69,7 @@ module aptos_fighters_address::aptos_fighters {
         
     }
     // mapping
-    struct AssetBalance has key, store, drop {
+    struct AssetBalance has key, store, drop { // it could be simplified to balance 1 and 22
          player: address,
          balance: u64,
         
@@ -296,12 +300,45 @@ That's why you correctly noted you don't need `acquires Game` in your `init_cont
 }
 public entry fun enroll_player(sender:&signer, deployer:address) acquires Game{
     let game = borrow_global_mut<Game>(deployer);
+    let sender_addr = signer::address_of(sender);
     assert!(game.game_rules.game_start_time> timestamp::now_seconds(),error::invalid_argument(EGAME_IN_PROGRESS) );
     assert!(game.player1 == @0x0 || game.player2 == @0x0, error::invalid_argument(EGAME_IS_FULL));
     assert!(game.player1 != signer::address_of(sender) || game.player2 != signer::address_of(sender), error::invalid_argument(ENOT_AUTHORIZED));
-     //let metadata = object::address_to_object<Token>(game.game_token);
-    //primary_fungible_store::transfer(sender, metadata, //@aptos_fighters_address, game.game_rules.game_staking_amount); // how can we transfer it to the contract itself ??? 
+     let metadata = object::address_to_object<Metadata>(game.game_token);
+    primary_fungible_store::transfer(sender, metadata, @aptos_fighters_address, game.game_rules.game_staking_amount); // how can we transfer it to the contract itself ??? 
+    
+  let i = 0;
+        let length = vector::length(& game.game_rules.assets);
+        while (i < length) {
+          let asset=   vector::borrow(& game.game_rules.assets, i);
+          let amount=   vector::borrow(& game.game_rules.asset_amounts, i);
+            // Now you have both i (index) and element
+            // Do something with index i and element
+            // get metadata of the token and check the balance, player should hold these balances 
+              let asset_metadata = object::address_to_object<Metadata>(*asset);
+             assert!(primary_fungible_store::balance(sender_addr, asset_metadata) == *amount, EINSUFFICIENT_BALANCE);
+    
+        };
+        // let's update state 
+        if (game.player1==@0x0){
+            game.player1= sender_addr;
+        }else{
+            game.player2= sender_addr;
+        };
+        // set initial balances 
+        let asset1_balance = AssetBalance{
+            player:sender_addr,
+            balance:ASSET1_DEFAULT_BALANCE,
+        };
+        let asset2_balance = AssetBalance{
+            player:sender_addr,
+            balance:ASSET2_DEFAULT_BALANCE,
+        };
+        //  you still need to explicitly use &mut to access and modify fields within it
+        vector::push_back(&mut game.user_asset1_balance,  asset1_balance);
+        vector::push_back(&mut game.user_asset2_balance,  asset2_balance);
 
+        
 }
 /**
     function enrollPlayer() external {
