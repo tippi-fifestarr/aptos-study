@@ -254,7 +254,7 @@ deployer: &signer, // we have to use it, although the contract should not be own
 
             ```move
             #[test(account = @0x1)]
-            public entry fun sender_can_set_message(account: signer) acquires Game {
+            public entry fun player_can_set_message(account: signer) acquires Game {
                 // This tells the compiler that this function will access the Game resource
             }
             ```
@@ -312,15 +312,15 @@ deployer: &signer, // we have to use it, although the contract should not be own
     
     move_to(&obj_add, game);
 }
-public entry fun enroll_player(sender:&signer, deployer:address) acquires Game{
+public entry fun enroll_player(player:&signer, deployer:address) acquires Game{
     
     let game = borrow_global_mut<Game>(get_game_address(deployer,1));
-    let sender_addr = signer::address_of(sender);
+    let player_addr = signer::address_of(player);
     assert!(game.game_rules.game_start_time> timestamp::now_seconds(),error::invalid_argument(EGAME_IN_PROGRESS) );
     assert!(game.player1 == @0x0 || game.player2 == @0x0, error::invalid_argument(EGAME_IS_FULL));
-    assert!(game.player1 != signer::address_of(sender) || game.player2 != signer::address_of(sender), error::invalid_argument(ENOT_AUTHORIZED));
+    assert!(game.player1 != signer::address_of(player) || game.player2 != signer::address_of(player), error::invalid_argument(ENOT_AUTHORIZED));
      let metadata = object::address_to_object<Metadata>(game.game_token);
-    primary_fungible_store::transfer(sender, metadata, @aptos_fighters_address, game.game_rules.game_staking_amount); // how can we transfer it to the contract itself ??? 
+    primary_fungible_store::transfer(player, metadata, @aptos_fighters_address, game.game_rules.game_staking_amount); // how can we transfer it to the contract itself ??? 
     
   let i = 0;
         let length = vector::length(& game.game_rules.assets);
@@ -331,29 +331,40 @@ public entry fun enroll_player(sender:&signer, deployer:address) acquires Game{
             // Do something with index i and element
             // get metadata of the token and check the balance, player should hold these balances 
               let asset_metadata = object::address_to_object<Metadata>(*asset);
-             assert!(primary_fungible_store::balance(sender_addr, asset_metadata) == *amount, EINSUFFICIENT_BALANCE);
+             assert!(primary_fungible_store::balance(player_addr, asset_metadata) == *amount, EINSUFFICIENT_BALANCE);
     
         };
         // let's update state 
         if (game.player1==@0x0){
-            game.player1= sender_addr;
+            game.player1= player_addr;
         }else{
-            game.player2= sender_addr;
+            game.player2= player_addr;
         };
         // set initial balances 
         let asset1_balance = AssetBalance{
-            player:sender_addr,
+            player:player_addr,
             balance:ASSET1_DEFAULT_BALANCE,
         };
         let asset2_balance = AssetBalance{
-            player:sender_addr,
+            player:player_addr,
             balance:ASSET2_DEFAULT_BALANCE,
         };
         //  you still need to explicitly use &mut to access and modify fields within it
         vector::push_back(&mut game.user_asset1_balance,  asset1_balance);
         vector::push_back(&mut game.user_asset2_balance,  asset2_balance);
-
-        
+        event::emit(PlayerEnrolled{player:player_addr});
+                // If both players are enrolled, update game status
+            
+          if (game.player1!=@0x0 && game.player2!=@0x0){
+             // Check if game should start immediately
+                    if (timestamp::now_seconds() >= game.game_rules.game_start_time) {
+                        event::emit(GameStarted{
+                              start_time:  game.game_rules.game_start_time, 
+                                duration:  game.game_rules.game_duration, 
+                        });
+                    };
+            
+        };
 }
         /**
             function enrollPlayer() external {
@@ -361,7 +372,7 @@ public entry fun enroll_player(sender:&signer, deployer:address) acquires Game{
                 if (block.timestamp >= gameRules.gameStartTime) revert GameInProgress();
 
                 // Check player is not already enrolled
-                if (msg.sender == player1 || msg.sender == player2)
+                if (msg.player == player1 || msg.player == player2)
                     revert NotAuthorized();
 
                 // Check if game is full
@@ -369,7 +380,7 @@ public entry fun enroll_player(sender:&signer, deployer:address) acquires Game{
 
                 // Stake the game token
                 gameToken.safeTransferFrom(
-                    msg.sender,
+                    msg.player,
                     address(this),
                     gameRules.gameStakingAmount
                 );
@@ -380,28 +391,28 @@ public entry fun enroll_player(sender:&signer, deployer:address) acquires Game{
                     IERC20 asset = IERC20(gameRules.assets[i]);
                     uint256 requiredAmount = gameRules.assetAmounts[i];
 
-                    if (asset.balanceOf(msg.sender) < requiredAmount) {
+                    if (asset.balanceOf(msg.player) < requiredAmount) {
                         revert InsufficientBalance(
                             requiredAmount,
-                            asset.balanceOf(msg.sender)
+                            asset.balanceOf(msg.player)
                         );
                     }
 
-                    asset.safeTransferFrom(msg.sender, address(this), requiredAmount);
+                    asset.safeTransferFrom(msg.player, address(this), requiredAmount);
                 }
 
                 // Register player
                 if (player1 == address(0)) {
-                    player1 = msg.sender;
+                    player1 = msg.player;
                 } else {
-                    player2 = msg.sender;
+                    player2 = msg.player;
                 }
 
                 // Initialize player balances
-                userAsset1Balance[msg.sender] = 100; // Give some initial balance for gameplay
-                userAsset2Balance[msg.sender] = 10000; // Give some initial balance for gameplay
+                userAsset1Balance[msg.player] = 100; // Give some initial balance for gameplay
+                userAsset2Balance[msg.player] = 10000; // Give some initial balance for gameplay
 
-                emit PlayerEnrolled(msg.sender);
+                emit PlayerEnrolled(msg.player);
 
                 // If both players are enrolled, update game status
                 if (player1 != address(0) && player2 != address(0)) {
@@ -438,8 +449,8 @@ public entry fun buy_apt (player:&signer, amount:u64, deployer:address) acquires
             assert!(asset2_balance.balance >= cost, EINSUFFICIENT_BALANCE);
                // Update balances
             let asset1_balance = get_user_asset_balance_mut(&mut game.user_asset1_balance,player_add);
-            /**       userAsset1Balance[msg.sender] += amount;
-                userAsset2Balance[msg.sender] -= cost;*/
+            /**       userAsset1Balance[msg.player] += amount;
+                userAsset2Balance[msg.player] -= cost;*/
                 asset1_balance.balance=   asset1_balance.balance+ amount;
                 asset2_balance.balance=   asset2_balance.balance- cost;
             // emit event 
@@ -469,15 +480,15 @@ public entry fun buy_apt (player:&signer, amount:u64, deployer:address) acquires
                 uint256 cost = price * amount;
 
                 // Check player has sufficient balance
-                if (userAsset2Balance[msg.sender] < cost) {
-                    revert InsufficientBalance(cost, userAsset2Balance[msg.sender]);
+                if (userAsset2Balance[msg.player] < cost) {
+                    revert InsufficientBalance(cost, userAsset2Balance[msg.player]);
                 }
 
                 // Update balances
-                userAsset1Balance[msg.sender] += amount;
-                userAsset2Balance[msg.sender] -= cost;
+                userAsset1Balance[msg.player] += amount;
+                userAsset2Balance[msg.player] -= cost;
 
-                emit AssetTraded(msg.sender, true, amount, price);
+                emit AssetTraded(msg.player, true, amount, price);
                 return true;
             }*/
 // helper 
