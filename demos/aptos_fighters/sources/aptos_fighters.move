@@ -491,6 +491,125 @@ public entry fun buy_apt (player:&signer, amount:u64, deployer:address) acquires
                 emit AssetTraded(msg.player, true, amount, price);
                 return true;
             }*/
+
+
+public entry fun sell_apt (player:&signer, amount:u64, deployer:address) acquires Game{
+    
+    let game = borrow_global_mut<Game>(get_game_address(deployer,1));
+    let player_add = signer::address_of(player);
+    // is authorized ? is player i mean 
+    assert!(game.player1==player_add || game.player2==player_add, ENOT_AUTHORIZED);
+    // Check if game has ended
+    assert!(timestamp::now_seconds()< game.game_rules.game_start_time+ game.game_rules.game_duration, EGAME_ENDED);
+    // Skip operation if amount is zero
+    if (amount==0){
+        return
+    };
+     // Fetch current apt price
+
+        let price = fetch_price(game.data_feed);
+        let price_positive = i64::get_magnitude_if_positive(&price::get_price(&price)); // This will fail if the price is negative
+        let expo_magnitude = i64::get_magnitude_if_negative(&price::get_expo(&price)); // This will fail if the exponent is positive
+
+        let price_in_aptos_coin =  (OCTAS_PER_APTOS * pow(10, expo_magnitude)) / price_positive; // 1 USD in APT
+            // Calculate cost
+            let cost = price_in_aptos_coin * amount;
+            // Check player has sufficient balance
+             let asset1_balance = get_user_asset_balance_mut(&mut game.user_asset1_balance,player_add);
+
+            assert!(asset1_balance.balance >= cost, EINSUFFICIENT_BALANCE);
+             let asset2_balance = get_user_asset_balance_mut(&mut game.user_asset2_balance,player_add);
+
+               // Update balances
+      
+                asset1_balance.balance=   asset1_balance.balance- amount;
+                asset2_balance.balance=   asset2_balance.balance+ cost;
+            // emit event 
+            event::emit(AssetTraded{
+                player: player_add,
+                price: price_in_aptos_coin,
+                asset_amount: amount,
+                is_buy: false,
+            });
+}
+            /**function sellEth(uint256 amount) external onlyPlayers returns (bool) {
+        // Check if game has ended
+        if (
+            block.timestamp > gameRules.gameStartTime + gameRules.gameDuration
+        ) {
+            revert GameEnded();
+        }
+
+        // Skip operation if amount is zero
+        if (amount == 0) return true;
+
+        // Fetch current ETH price
+        uint256 price = fetchPrice();
+
+        // Calculate revenue
+        uint256 revenue = price * amount;
+
+        // Check player has sufficient ETH
+        if (userAsset1Balance[msg.sender] < amount) {
+            revert InsufficientBalance(amount, userAsset1Balance[msg.sender]);
+        }
+
+        // Update balances
+        userAsset1Balance[msg.sender] -= amount;
+        userAsset2Balance[msg.sender] += revenue;
+
+        emit AssetTraded(msg.sender, false, amount, price);
+        return true;
+    }*/
+
+
+
+
+
+    /* function withdraw() public onlyPlayers {
+        // Ensure game has ended
+        if (
+            block.timestamp < gameRules.gameStartTime + gameRules.gameDuration
+        ) {
+            revert GameNotEnded();
+        }
+
+        // Determine if the caller is player1 or player2
+        bool isPlayer1 = (msg.sender == player1);
+
+        // Check if this player has already claimed their reward
+        if (
+            (isPlayer1 && player1RewardClaimed) ||
+            (!isPlayer1 && player2RewardClaimed)
+        ) {
+            revert RewardAlreadyClaimed();
+        }
+
+        // Get the winner
+        address winner = _getWinner();
+
+        // Calculate amount to return
+        uint256 amountToReturn = gameRules.gameStakingAmount;
+        bool isWinner = (msg.sender == winner);
+
+        // Add reward amount if this player is the winner
+        if (isWinner && winner != address(0)) {
+            amountToReturn += gameRules.rewardAmount;
+        }
+
+        // Mark as claimed
+        if (isPlayer1) {
+            player1RewardClaimed = true;
+        } else {
+            player2RewardClaimed = true;
+        }
+
+        // Transfer tokens
+        gameToken.safeTransfer(msg.sender, amountToReturn);
+
+        // Emit event
+        emit RewardClaimed(msg.sender, amountToReturn, isWinner);
+    }*/
 // helper 
 // @dev @notice @todo : we should update the price , but this would require paying for this in aptos coin, we are just skipping this for now , will do it later 
 fun fetch_price(asset_price_identifier : vector<u8>) :  Price{
@@ -511,11 +630,75 @@ fun fetch_price(asset_price_identifier : vector<u8>) :  Price{
     // }
         /// view functions 
 
+/*   function getWinner() external view returns (address) {
+        // Check if the game has ended
+        if (
+            block.timestamp <= gameRules.gameStartTime + gameRules.gameDuration
+        ) {
+            revert GameNotEnded();
+        }
 
+        return _getWinner();
+    }
+    
+      function _getWinner() internal view returns (address) {
+        uint256 player1Value = userAsset1Balance[player1] +
+            userAsset2Balance[player1];
+        uint256 player2Value = userAsset1Balance[player2] +
+            userAsset2Balance[player2];
+
+        if (player1Value > player2Value) {
+            return player1;
+        } else if (player2Value > player1Value) {
+            return player2;
+        } else {
+            return address(0); // Tie
+        }
+    }
+
+    
+    */
+fun get_winner(game: &Game): (address, u64) {
+    let player1 = game.player1;
+    let player2 = game.player2;
+    
+    // Use immutable read-only version of the function
+    let player1_asset1_balance = get_user_asset_balance(&game.user_asset1_balance, player1);
+    let player1_asset2_balance = get_user_asset_balance(&game.user_asset2_balance, player1);
+    let player2_asset1_balance = get_user_asset_balance(&game.user_asset1_balance, player2);
+    let player2_asset2_balance = get_user_asset_balance(&game.user_asset2_balance, player2);
+    
+    let player1_total_val = player1_asset1_balance.balance + player1_asset2_balance.balance;
+    let player2_total_val = player2_asset1_balance.balance + player2_asset2_balance.balance;
+    
+    // Determine the winner based on total value
+    if (player1_total_val > player2_total_val) {
+        (player1, player1_total_val)
+    } else {
+        (player2, player2_total_val)
+    }
+}
+
+// Non-mutable version of the balance lookup function
+public fun get_user_asset_balance(
+    asset_balances: &vector<AssetBalance>,
+    user_address: address
+): &AssetBalance {
+    let i = 0;
+    while (i < vector::length(asset_balances)) {
+        let balance = vector::borrow(asset_balances, i);
+        if (balance.player == user_address) {
+            return balance
+        };
+        i = i + 1;
+    };
+    // Handle case where no matching address is found
+    abort 1 // Or a more specific error code
+}
 // Return a mutable reference to the matching AssetBalance
 
 // Remove #[view] since view functions can't return mutable references
-public fun get_user_asset_balance_mut(
+ fun get_user_asset_balance_mut(
     asset_balances: &mut vector<AssetBalance>,  // Changed parameter name for clarity
     user_address: address
 ): &mut AssetBalance {
