@@ -3,7 +3,8 @@ module aptos_fighters_address::aptos_fighters {
     use std::signer;
     use std::string::{Self, String};
     use std::vector;
-    
+    use aptos_std::string_utils;
+    use std::bcs;
     use aptos_framework::object::{Self, Object, LinearTransferRef, TransferRef};
     use aptos_framework::fungible_asset::{Self, Metadata};
     use aptos_framework::primary_fungible_store;
@@ -295,8 +296,13 @@ That's why you correctly noted you don't need `acquires Game` in your `init_cont
         user_asset1_balance: vector::empty<AssetBalance>(),
         user_asset2_balance: vector::empty<AssetBalance>()
     };
+       let obj_hold_add = object::create_named_object(
+            // singer , seed 
+            deployer, construct_seed(1)
+        );
+        let obj_add = object::generate_signer(&obj_hold_add);
     
-    move_to(deployer, game);
+    move_to(&obj_add, game);
 }
 public entry fun enroll_player(sender:&signer, deployer:address) acquires Game{
     let game = borrow_global_mut<Game>(deployer);
@@ -397,6 +403,40 @@ public entry fun enroll_player(sender:&signer, deployer:address) acquires Game{
         }
     }
 */
+public entry fun buy_apt (player:&signer, amount:u64)  {
+    let player_add = signer::address_of(player);
+    // is authorized ? is player i mean 
+    // let game_mut = borrow_global_mut<Game>(deployer);
+}
+/** function buyEth(uint256 amount) external onlyPlayers returns (bool) {
+        // Check if game has ended
+        if (
+            block.timestamp > gameRules.gameStartTime + gameRules.gameDuration
+        ) {
+            revert GameEnded();
+        }
+
+        // Skip operation if amount is zero
+        if (amount == 0) return true;
+
+        // Fetch current ETH price
+        uint256 price = fetchPrice();
+
+        // Calculate cost
+        uint256 cost = price * amount;
+
+        // Check player has sufficient balance
+        if (userAsset2Balance[msg.sender] < cost) {
+            revert InsufficientBalance(cost, userAsset2Balance[msg.sender]);
+        }
+
+        // Update balances
+        userAsset1Balance[msg.sender] += amount;
+        userAsset2Balance[msg.sender] -= cost;
+
+        emit AssetTraded(msg.sender, true, amount, price);
+        return true;
+    }*/
 
 /// view functions 
 
@@ -423,7 +463,12 @@ This is a fundamental safety feature in Move. References returned from functions
     public fun exists_at(addr: address): bool {
         exists<Game>(addr)
     }
-
+// helper functions 
+#[view]
+    public fun construct_seed(seed: u64): vector<u8> {
+        //Wwe add contract address as part of the seed so seed from 2 todo list contract for same user would be different
+        bcs::to_bytes(&string_utils::format2(&b"{}_{}", @aptos_fighters_address, seed))
+    }
 
     
     // ============== TEST FUNCTIONS ==============
@@ -487,9 +532,17 @@ This is a fundamental safety feature in Move. References returned from functions
             assets,
             asset_amounts
         );
-        
+    let deployer_address = signer::address_of(&deployer);
+
+        // test revert here cuz the object is already create at deterministic address , recreating it will fail, need to find a way to get it from global 
+        let game_address = object::create_object_address(
+            // address , seed 
+            &deployer_address, construct_seed(1)
+        );
+        // let obj_add = object::generate_signer(&obj_hold_add);
+        // let game_address = signer::address_of(&obj_add);
         // Verify the contract was initialized
-        assert!(exists_at(DEPLOYER), 0);
+        assert!(exists_at(game_address), 0);
     }
     #[test(aptos_framework = @aptos_framework)]
 public fun test_game_creation_success(aptos_framework: &signer) acquires Game {
@@ -537,12 +590,21 @@ public fun test_game_creation_success(aptos_framework: &signer) acquires Game {
         assets,
         asset_amounts
     );
-    
+    //       let obj_hold_add = object::create_named_object(
+    //             // singer , seed 
+    //             &deployer, construct_seed(1)
+    //         );
+    //         let obj_add = object::generate_signer(&obj_hold_add);
+    //  let game_address = signer::address_of(&obj_add);
+   let game_address = object::create_object_address(
+            // address , seed 
+            &deployer_address, construct_seed(1)
+        );
     // Verify the game exists
-    assert!(exists<Game>(deployer_address), 0);
+    assert!(exists<Game>(game_address), 0);
     
     // Optional: Verify game properties are set correctly
-    let game = borrow_global<Game>(deployer_address);
+    let game = borrow_global<Game>(game_address);
     
     // Verify basic properties
     assert!(game.game_token == game_token_add, 1);
