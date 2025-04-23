@@ -562,7 +562,23 @@ public entry fun sell_apt (player:&signer, amount:u64, deployer:address) acquire
         return true;
     }*/
 
+    public entry fun withdraw (player:&signer, deployer:address) acquires Game{
+        let game = borrow_global_mut<Game>(get_game_address(deployer,1));
+        let player_add = signer::address_of(player);
+        assert!(game.player1==player_add || game.player2==player_add, ENOT_AUTHORIZED);
+        assert!(timestamp::now_seconds()>game.game_rules.game_start_time+ game.game_rules.game_duration, EGAME_NOT_ENDED);
+        // Determine if the caller is player1 or player2
+        let amount_to_withdraw = game.game_rules.reward_amount;
+        // let is_Player1 = ( == game.player1);
+        let (winner,amount)= get_winner(game);
 
+   
+    let metadata = object::address_to_object<Metadata>(game.game_token);
+    // @todo : not working because we need a signer 
+    // primary_fungible_store::transfer(@aptos_fighters_address, metadata, player_add,amount_to_withdraw); // how can we transfer it to the contract itself ??? 
+
+
+    }
 
 
 
