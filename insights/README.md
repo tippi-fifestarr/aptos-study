@@ -1,6 +1,6 @@
 # Aptos Hackathon Quickstart Insights
 
-This folder contains comprehensive insights extracted from Eman's study notes and user interview to enhance the Aptos Hackathon Quickstart guide and Decision Tree. These recommendations are designed to help make the hackathon experience more accessible and effective for participants from various backgrounds.
+This folder contains comprehensive insights extracted from Eman's study notes and user interviews to enhance the Aptos Hackathon Quickstart guide and Decision Tree. These recommendations are designed to help make the hackathon experience more accessible and effective for participants from various backgrounds.
 
 ## Overview of Insights
 
@@ -55,6 +55,23 @@ A summary of key changes needed based on Eman's follow-up conversation:
 - Dependency management challenges
 - Clean project command issues
 
+### 8. [Demo Implementation Insights](./demo_implementation_insights.md)
+Detailed analysis of Eman's experience implementing the Aptos Fighters demo:
+- Contract migration process from Ethereum to Aptos
+- Key technical challenges encountered
+- Solutions and workarounds discovered
+- Practical code patterns and examples
+- Learning resources that proved most valuable
+
+### 9. [Tool Developer Recommendations](./tool_developer_recommendations.md)
+Specific recommendations for enhancing the Aptos developer tooling ecosystem:
+- Enhanced testing framework capabilities
+- Static analysis and security tools
+- Improved CLI experience
+- Developer interface tools
+- Documentation generators and helpers
+- Integration and deployment tools
+
 ## Key Cross-Cutting Themes
 
 Throughout Eman's feedback and study notes, several important themes emerged:
@@ -94,6 +111,11 @@ Throughout Eman's feedback and study notes, several important themes emerged:
 
    Version conflicts between packages cause significant time loss during hackathons.
 
+8. **Constructor Pattern Confusion**
+   > "This should be like a constructor and the constructor in Ethereum by default, like in Solidity by default, it's called once... anyone can call it. So you need to add some kind of like modifiers inside it."
+
+   The different initialization patterns between Solidity and Move create security considerations that need clear documentation.
+
 ## Implementation Priorities
 
 Based on the comprehensive insights, here are the recommended implementation priorities:
@@ -111,5 +133,7 @@ Based on the comprehensive insights, here are the recommended implementation pri
 6. **Create CLI Troubleshooting Guide** to address ambiguous compilation results and dependency issues
 
 7. **Document Common Integration Challenges** especially for Oracle integrations and dependency management
+
+8. **Provide Constructor Pattern Examples** showing how to safely implement initialization functions in Move
 
 These insights provide a solid foundation for enhancing the Aptos Hackathon Quickstart to better serve participants and help them build innovative projects that leverage Aptos's unique capabilities.
